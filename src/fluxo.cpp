@@ -7,8 +7,10 @@
 
 static const char *TAG = "FLUXO";
 
-static volatile uint32_t s_pulsos_frio = 0;
-static volatile uint32_t s_pulsos_quente = 0;
+#include <atomic>
+
+static std::atomic<uint32_t> s_pulsos_frio{0};
+static std::atomic<uint32_t> s_pulsos_quente{0};
 
 static uint32_t s_last_pulsos_frio = 0;
 static uint32_t s_last_pulsos_quente = 0;
@@ -30,12 +32,12 @@ static uint32_t millis32() {
 
 static void IRAM_ATTR isr_fluxo_frio(void *arg) {
     (void)arg;
-    s_pulsos_frio++;
+    s_pulsos_frio.fetch_add(1, std::memory_order_relaxed);
 }
 
 static void IRAM_ATTR isr_fluxo_quente(void *arg) {
     (void)arg;
-    s_pulsos_quente++;
+    s_pulsos_quente.fetch_add(1, std::memory_order_relaxed);
 }
 
 void fluxo_init() {
@@ -69,8 +71,8 @@ void fluxo_update() {
 
     s_last_update_us = now_us;
 
-    uint32_t p_frio = s_pulsos_frio;
-    uint32_t p_quente = s_pulsos_quente;
+    uint32_t p_frio = s_pulsos_frio.load(std::memory_order_relaxed);
+    uint32_t p_quente = s_pulsos_quente.load(std::memory_order_relaxed);
 
     uint32_t d_frio = p_frio - s_last_pulsos_frio;
     uint32_t d_quente = p_quente - s_last_pulsos_quente;
@@ -120,11 +122,11 @@ bool fluxo_quente_ativo() {
 }
 
 uint32_t fluxo_pulsos_frio() {
-    return s_pulsos_frio;
+    return s_pulsos_frio.load(std::memory_order_relaxed);
 }
 
 uint32_t fluxo_pulsos_quente() {
-    return s_pulsos_quente;
+    return s_pulsos_quente.load(std::memory_order_relaxed);
 }
 
 uint32_t fluxo_last_stop_frio_ms() {
