@@ -70,6 +70,22 @@ static void task_hidrocontrol(void *pv) {
     }
 }
 
+static void task_blink(void *pv)
+{
+    bool led = false;
+    gpio_reset_pin(PIN_LED_STATUS);
+    gpio_set_direction(PIN_LED_STATUS, GPIO_MODE_OUTPUT);
+
+    while (true)
+    {
+        led = !led;
+
+        gpio_set_level(PIN_LED_STATUS, led);
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "HidroControl-3 V0.1 - ESP-IDF C++");
@@ -86,5 +102,14 @@ extern "C" void app_main(void) {
         nullptr,
         5,
         nullptr
+    );
+
+    xTaskCreate(
+    task_blink,
+    "task_blink",
+    2048,
+    nullptr,
+    1,
+    nullptr
     );
 }

@@ -1,0 +1,63 @@
+Perfeito.
+
+Você está em um bom ponto de parada:
+
+✅ Projeto **HidroControl-3** criado
+✅ ESP-IDF + C++ funcionando
+✅ Git configurado
+✅ V0.1 compilando com sucesso
+✅ Estrutura inicial de relés e sensores pronta
+✅ Ambiente `AC220` definido
+
+Agora vale a pena preparar o hardware com calma antes de avançarmos.
+
+Quando retornar, recomendo seguirmos nesta ordem:
+
+### V0.1A — Validação de Hardware
+
+* Confirmar GPIOs reais da AC220
+* Testar relé FRIO
+* Testar relé QUENTE
+* Testar sensor de fluxo FRIO
+* Testar sensor de fluxo QUENTE
+* Confirmar lógica de relés desligados no boot
+
+### V0.2 — Lógica HidroControl
+
+* Modo NORMAL
+* Retardo de desligamento (5 s)
+* Logs detalhados
+
+### V0.3 — Modos DUO e MIX
+
+* Implementação completa da lógica da V3.0
+
+### V0.4 — OLED
+
+* SSD1306
+* Páginas de status
+* Vazão
+* Estado dos relés
+
+### V0.5 — Wi-Fi
+
+* STA
+* AP de configuração
+
+### V1.0
+
+Primeira versão funcional equivalente à V3.0, porém em ESP-IDF.
+
+Uma observação para retomarmos depois: como estamos recomeçando do zero, vamos aproveitar para documentar cada versão com tags Git:
+
+```bash
+git tag V0.0
+git tag V0.1
+git tag V0.2
+...
+git tag V1.0
+```
+
+Isso facilitará muito qualquer retorno a versões estáveis.
+
+Boa montagem do hardware. Quando estiver com a AC220 ligada e os sensores conectados, retomamos a partir da validação prática da V0.1.

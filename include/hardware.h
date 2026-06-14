@@ -16,3 +16,5 @@
 #define STARTUP_INHIBIT_MS 3000
 
 #define FLOW_K_FACTOR      6.6f   // F = 6,6 x Q  => Q = F / 6,6
+
+#define PIN_LED_STATUS GPIO_NUM_2
