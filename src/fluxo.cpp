@@ -65,9 +65,12 @@ void fluxo_update() {
     int64_t now_us = esp_timer_get_time();
     int64_t dt_us = now_us - s_last_update_us;
 
-    if (dt_us < 500000) {
+    /*if (dt_us < 500000) {
         return;
-    }
+    }*/
+    if (dt_us < 1000000) {
+        return;
+}
 
     s_last_update_us = now_us;
 

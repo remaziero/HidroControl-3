@@ -18,3 +18,6 @@
 #define FLOW_K_FACTOR      6.6f   // F = 6,6 x Q  => Q = F / 6,6
 
 #define PIN_LED_STATUS GPIO_NUM_2
+
+#define RELAY_OFF_LEVEL 0
+#define RELAY_ON_LEVEL  1
