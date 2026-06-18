@@ -11,6 +11,7 @@
 #include "reles.h"
 #include "fluxo.h"
 #include "modos.h"
+#include "oled.h"
 
 static const char *TAG = "MAIN";
 
@@ -31,21 +32,24 @@ static void task_hidrocontrol(void *pv) {
     while (true) {
         uint32_t now = millis32();
 
+        // Atualiza botão físico de modo: NORMAL -> DUO -> MIX -> NORMAL
         modos_update_button();
 
+        // Atualiza leitura dos sensores de fluxo
         fluxo_update();
 
         bool frio_ativo   = fluxo_frio_ativo();
         bool quente_ativo = fluxo_quente_ativo();
 
-        bool demanda_frio = false;
+        bool demanda_frio   = false;
         bool demanda_quente = false;
 
-        bool rele_frio = false;
+        bool rele_frio   = false;
         bool rele_quente = false;
 
         ModoOperacao modo = modos_get();
 
+        // Proteção inicial: durante STARTUP_INHIBIT_MS os relés permanecem desligados
         if (now > STARTUP_INHIBIT_MS) {
             demanda_frio =
                 frio_ativo ||
@@ -57,16 +61,24 @@ static void task_hidrocontrol(void *pv) {
 
             switch (modo) {
                 case ModoOperacao::NORMAL:
+                    // NORMAL:
+                    // Fluxo frio   -> relé frio
+                    // Fluxo quente -> relé quente
                     rele_frio   = demanda_frio;
                     rele_quente = demanda_quente;
                     break;
 
                 case ModoOperacao::DUO:
+                    // DUO:
+                    // Qualquer fluxo aciona os dois relés
                     rele_frio   = demanda_frio || demanda_quente;
                     rele_quente = demanda_frio || demanda_quente;
                     break;
 
                 case ModoOperacao::MIX:
+                    // MIX:
+                    // Frio aciona só frio
+                    // Quente aciona frio + quente
                     rele_frio   = demanda_frio || demanda_quente;
                     rele_quente = demanda_quente;
                     break;
@@ -91,6 +103,17 @@ static void task_hidrocontrol(void *pv) {
                      fluxo_quente_lmin(),
                      quente_ativo,
                      reles_quente_ligado());
+
+            // Estados provisórios:
+            // WiFi e MQTT ainda não foram implementados nesta etapa.
+            // Por enquanto aparecem como desconectados no OLED.
+            oled_show_status(
+                false,                 // WiFi conectado? Ainda não implementado
+                false,                 // MQTT conectado? Ainda não implementado
+                modos_nome(modo),
+                fluxo_frio_lmin(),
+                fluxo_quente_lmin()
+            );
         }
 
         vTaskDelay(pdMS_TO_TICKS(20));
@@ -114,13 +137,15 @@ static void task_blink(void *pv) {
 
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "====================================");
-    ESP_LOGI(TAG, "HidroControl-3 V0.3 - Modos de operacao");
+    ESP_LOGI(TAG, "HidroControl-3 V0.4 - OLED de status");
     ESP_LOGI(TAG, "AC220 / NodeMCU-32S board profile");
     ESP_LOGI(TAG, "====================================");
 
+    // Inicialização de hardware e módulos
     reles_init();
     fluxo_init();
     modos_init();
+    oled_init();
 
     xTaskCreate(
         task_hidrocontrol,

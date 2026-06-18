@@ -24,3 +24,12 @@
 
 #define PIN_MODE_BUTTON GPIO_NUM_27
 #define MODE_BUTTON_DEBOUNCE_MS 120
+
+// OLED SSD1306 I2C
+#define PIN_OLED_SDA      GPIO_NUM_21
+#define PIN_OLED_SCL      GPIO_NUM_22
+#define OLED_I2C_PORT     I2C_NUM_0
+#define OLED_I2C_ADDR     0x3C
+#define OLED_WIDTH        128
+#define OLED_HEIGHT       64
+#define OLED_I2C_FREQ_HZ  400000    

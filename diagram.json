@@ -78,6 +78,13 @@
       "top": 170.6,
       "left": -144,
       "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "board-ssd1306",
+      "id": "oled1",
+      "top": -54.46,
+      "left": -124.57,
+      "attrs": { "i2cAddress": "0x3c" }
     }
   ],
   "connections": [
@@ -101,7 +108,16 @@
     [ "esp:GND.1", "r3:2", "black", [ "h-23.81", "v57.6", "h144" ] ],
     [ "esp:23", "r1:1", "green", [ "h14.44", "v9.6", "v-9.6" ] ],
     [ "esp:27", "btn1:1.r", "green", [ "h-33.41", "v28.8" ] ],
-    [ "esp:GND.1", "btn1:2.l", "black", [ "h-23.81", "v57.6", "h-124.8" ] ]
+    [ "esp:GND.1", "btn1:2.l", "black", [ "h-23.81", "v57.6", "h-124.8" ] ],
+    [ "oled1:GND", "btn1:2.l", "black", [ "v-9.6", "h-96", "v240" ] ],
+    [
+      "oled1:VCC",
+      "esp:5V",
+      "red",
+      [ "v-19.2", "h-115.05", "v278.4", "h0", "v9.6", "h182.4", "v-19.2" ]
+    ],
+    [ "oled1:SCL", "esp:22", "violet", [ "v-19.2", "h201.9", "v115.2" ] ],
+    [ "oled1:SDA", "esp:21", "blue", [ "v-9.6", "h201.67", "v115.2", "h-28.8", "v19.2" ] ]
   ],
   "dependencies": {}
 }
