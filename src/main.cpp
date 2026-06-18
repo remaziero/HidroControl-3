@@ -3,12 +3,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
 #include "hardware.h"
 #include "reles.h"
 #include "fluxo.h"
+#include "modos.h"
 
 static const char *TAG = "MAIN";
 
@@ -29,22 +31,46 @@ static void task_hidrocontrol(void *pv) {
     while (true) {
         uint32_t now = millis32();
 
+        modos_update_button();
+
         fluxo_update();
 
-        bool frio_ativo = fluxo_frio_ativo();
+        bool frio_ativo   = fluxo_frio_ativo();
         bool quente_ativo = fluxo_quente_ativo();
+
+        bool demanda_frio = false;
+        bool demanda_quente = false;
 
         bool rele_frio = false;
         bool rele_quente = false;
 
+        ModoOperacao modo = modos_get();
+
         if (now > STARTUP_INHIBIT_MS) {
-            rele_frio =
+            demanda_frio =
                 frio_ativo ||
                 hold_off_active(fluxo_last_stop_frio_ms(), now);
 
-            rele_quente =
+            demanda_quente =
                 quente_ativo ||
                 hold_off_active(fluxo_last_stop_quente_ms(), now);
+
+            switch (modo) {
+                case ModoOperacao::NORMAL:
+                    rele_frio   = demanda_frio;
+                    rele_quente = demanda_quente;
+                    break;
+
+                case ModoOperacao::DUO:
+                    rele_frio   = demanda_frio || demanda_quente;
+                    rele_quente = demanda_frio || demanda_quente;
+                    break;
+
+                case ModoOperacao::MIX:
+                    rele_frio   = demanda_frio || demanda_quente;
+                    rele_quente = demanda_quente;
+                    break;
+            }
         }
 
         reles_set_frio(rele_frio);
@@ -55,7 +81,8 @@ static void task_hidrocontrol(void *pv) {
             last_log = now;
 
             ESP_LOGI(TAG,
-                     "FRIO: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d | QUENTE: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d",
+                     "MODO=%s | FRIO: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d | QUENTE: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d",
+                     modos_nome(modo),
                      (unsigned long)fluxo_pulsos_frio(),
                      fluxo_frio_lmin(),
                      frio_ativo,
@@ -66,34 +93,34 @@ static void task_hidrocontrol(void *pv) {
                      reles_quente_ligado());
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
-static void task_blink(void *pv)
-{
+static void task_blink(void *pv) {
+    (void)pv;
+
     bool led = false;
+
     gpio_reset_pin(PIN_LED_STATUS);
     gpio_set_direction(PIN_LED_STATUS, GPIO_MODE_OUTPUT);
 
-    while (true)
-    {
+    while (true) {
         led = !led;
-
         gpio_set_level(PIN_LED_STATUS, led);
-
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
 extern "C" void app_main(void) {
     ESP_LOGI(TAG, "====================================");
-    ESP_LOGI(TAG, "HidroControl-3 V0.1 - ESP-IDF C++");
+    ESP_LOGI(TAG, "HidroControl-3 V0.3 - Modos de operacao");
     ESP_LOGI(TAG, "AC220 / NodeMCU-32S board profile");
     ESP_LOGI(TAG, "====================================");
 
     reles_init();
     fluxo_init();
+    modos_init();
 
     xTaskCreate(
         task_hidrocontrol,
@@ -105,11 +132,11 @@ extern "C" void app_main(void) {
     );
 
     xTaskCreate(
-    task_blink,
-    "task_blink",
-    2048,
-    nullptr,
-    1,
-    nullptr
+        task_blink,
+        "task_blink",
+        2048,
+        nullptr,
+        1,
+        nullptr
     );
 }

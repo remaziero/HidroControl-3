@@ -71,6 +71,13 @@
       "left": 95.45,
       "rotate": 90,
       "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-pushbutton-6mm",
+      "id": "btn1",
+      "top": 170.6,
+      "left": -144,
+      "attrs": { "color": "green", "xray": "1" }
     }
   ],
   "connections": [
@@ -92,7 +99,9 @@
     [ "esp:16", "r3:1", "green", [ "h0" ] ],
     [ "r3:2", "r2:2", "black", [ "h0", "v8.4", "h9.6", "v-9.6" ] ],
     [ "esp:GND.1", "r3:2", "black", [ "h-23.81", "v57.6", "h144" ] ],
-    [ "esp:23", "r1:1", "green", [ "h14.44", "v9.6", "v-9.6" ] ]
+    [ "esp:23", "r1:1", "green", [ "h14.44", "v9.6", "v-9.6" ] ],
+    [ "esp:27", "btn1:1.r", "green", [ "h-33.41", "v28.8" ] ],
+    [ "esp:GND.1", "btn1:2.l", "black", [ "h-23.81", "v57.6", "h-124.8" ] ]
   ],
   "dependencies": {}
 }
