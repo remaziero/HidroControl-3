@@ -15,6 +15,7 @@
 #include "oled.h"
 
 #include "netwifi.h"
+#include "mqttclient.h"
 
 static const char *TAG = "MAIN";
 
@@ -26,11 +27,12 @@ static bool hold_off_active(uint32_t last_stop_ms, uint32_t now_ms) {
     if (last_stop_ms == 0) return false;
     return (uint32_t)(now_ms - last_stop_ms) < DELAY_OFF_MS;
 }
-
+/*
 static void task_hidrocontrol(void *pv) {
     (void)pv;
 
     ESP_LOGI(TAG, "Task HidroControl iniciada");
+    uint32_t last_mqtt_pub = 0;
 
     while (true) {
         uint32_t now = millis32();
@@ -111,8 +113,8 @@ static void task_hidrocontrol(void *pv) {
             // WiFi e MQTT ainda não foram implementados nesta etapa.
             // Por enquanto aparecem como desconectados no OLED.
             oled_show_status(
-                netwifi_is_connected(),// WiFi conectado? implementado
-                false,                 // MQTT conectado? Ainda não implementado
+                netwifi_is_connected(),
+                mqttclient_is_connected(),
                 modos_nome(modo),
                 fluxo_frio_lmin(),
                 fluxo_quente_lmin()
@@ -122,6 +124,103 @@ static void task_hidrocontrol(void *pv) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
+*/
+static void task_hidrocontrol(void *pv) {
+    (void)pv;
+
+    ESP_LOGI(TAG, "Task HidroControl iniciada");
+
+    uint32_t last_mqtt_pub = 0;
+
+    while (true) {
+        uint32_t now = millis32();
+
+        modos_update_button();
+        fluxo_update();
+
+        bool frio_ativo   = fluxo_frio_ativo();
+        bool quente_ativo = fluxo_quente_ativo();
+
+        bool demanda_frio   = false;
+        bool demanda_quente = false;
+
+        bool rele_frio   = false;
+        bool rele_quente = false;
+
+        ModoOperacao modo = modos_get();
+
+        if (now > STARTUP_INHIBIT_MS) {
+            demanda_frio =
+                frio_ativo ||
+                hold_off_active(fluxo_last_stop_frio_ms(), now);
+
+            demanda_quente =
+                quente_ativo ||
+                hold_off_active(fluxo_last_stop_quente_ms(), now);
+
+            switch (modo) {
+                case ModoOperacao::NORMAL:
+                    rele_frio   = demanda_frio;
+                    rele_quente = demanda_quente;
+                    break;
+
+                case ModoOperacao::DUO:
+                    rele_frio   = demanda_frio || demanda_quente;
+                    rele_quente = demanda_frio || demanda_quente;
+                    break;
+
+                case ModoOperacao::MIX:
+                    rele_frio   = demanda_frio || demanda_quente;
+                    rele_quente = demanda_quente;
+                    break;
+            }
+        }
+
+        reles_set_frio(rele_frio);
+        reles_set_quente(rele_quente);
+
+        static uint32_t last_log = 0;
+        if ((uint32_t)(now - last_log) >= 1000) {
+            last_log = now;
+
+            ESP_LOGI(TAG,
+                     "MODO=%s | FRIO: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d | QUENTE: pulsos=%lu vazao=%.2f L/min ativo=%d rele=%d",
+                     modos_nome(modo),
+                     (unsigned long)fluxo_pulsos_frio(),
+                     fluxo_frio_lmin(),
+                     frio_ativo,
+                     reles_frio_ligado(),
+                     (unsigned long)fluxo_pulsos_quente(),
+                     fluxo_quente_lmin(),
+                     quente_ativo,
+                     reles_quente_ligado());
+
+            oled_show_status(
+                netwifi_is_connected(),
+                mqttclient_is_connected(),
+                modos_nome(modo),
+                fluxo_frio_lmin(),
+                fluxo_quente_lmin()
+            );
+        }
+
+        if ((uint32_t)(now - last_mqtt_pub) >= 5000) {
+            last_mqtt_pub = now;
+
+            mqttclient_publish_telemetry(
+                modos_nome(modo),
+                fluxo_frio_lmin(),
+                fluxo_quente_lmin(),
+                reles_frio_ligado(),
+                reles_quente_ligado(),
+                netwifi_is_connected()
+            );
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
 
 static void task_blink(void *pv) {
     (void)pv;
@@ -162,6 +261,7 @@ extern "C" void app_main(void) {
     modos_init();
     oled_init();
     netwifi_init();
+    mqttclient_init();
 
     xTaskCreate(
         task_hidrocontrol,
