@@ -6,12 +6,15 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
 
 #include "hardware.h"
 #include "reles.h"
 #include "fluxo.h"
 #include "modos.h"
 #include "oled.h"
+
+#include "netwifi.h"
 
 static const char *TAG = "MAIN";
 
@@ -108,7 +111,7 @@ static void task_hidrocontrol(void *pv) {
             // WiFi e MQTT ainda não foram implementados nesta etapa.
             // Por enquanto aparecem como desconectados no OLED.
             oled_show_status(
-                false,                 // WiFi conectado? Ainda não implementado
+                netwifi_is_connected(),// WiFi conectado? implementado
                 false,                 // MQTT conectado? Ainda não implementado
                 modos_nome(modo),
                 fluxo_frio_lmin(),
@@ -136,16 +139,29 @@ static void task_blink(void *pv) {
 }
 
 extern "C" void app_main(void) {
+        esp_err_t ret = nvs_flash_init();
+
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+        ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+
+    ESP_ERROR_CHECK(ret);
+
     ESP_LOGI(TAG, "====================================");
     ESP_LOGI(TAG, "HidroControl-3 V0.4 - OLED de status");
     ESP_LOGI(TAG, "AC220 / NodeMCU-32S board profile");
     ESP_LOGI(TAG, "====================================");
 
     // Inicialização de hardware e módulos
+    nvs_flash_init();
     reles_init();
     fluxo_init();
     modos_init();
     oled_init();
+    netwifi_init();
 
     xTaskCreate(
         task_hidrocontrol,
