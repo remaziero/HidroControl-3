@@ -236,7 +236,7 @@ static void task_blink(void *pv) {
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
-
+/*
 extern "C" void app_main(void) {
         esp_err_t ret = nvs_flash_init();
 
@@ -256,6 +256,49 @@ extern "C" void app_main(void) {
 
     // Inicialização de hardware e módulos
     nvs_flash_init();
+    reles_init();
+    fluxo_init();
+    modos_init();
+    oled_init();
+    netwifi_init();
+    mqttclient_init();
+
+    xTaskCreate(
+        task_hidrocontrol,
+        "task_hidrocontrol",
+        4096,
+        nullptr,
+        5,
+        nullptr
+    );
+
+    xTaskCreate(
+        task_blink,
+        "task_blink",
+        2048,
+        nullptr,
+        1,
+        nullptr
+    );
+}
+    */
+   extern "C" void app_main(void) {
+    esp_err_t ret = nvs_flash_init();
+
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+        ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "====================================");
+    ESP_LOGI(TAG, "HidroControl-3 V1.0.3 - OLED com WiFi/MQTT reais");
+    ESP_LOGI(TAG, "AC220 / NodeMCU-32S board profile");
+    ESP_LOGI(TAG, "====================================");
+
     reles_init();
     fluxo_init();
     modos_init();
