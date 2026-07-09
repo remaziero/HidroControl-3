@@ -13,6 +13,7 @@
 #include "fluxo.h"
 #include "modos.h"
 #include "oled.h"
+#include "deviceid.h"
 
 #include "netwifi.h"
 #include "mqttclient.h"
@@ -311,6 +312,7 @@ extern "C" void app_main(void) {
 reles_init();
 fluxo_init();
 modos_init();
+deviceid_init();
 oled_init();
 netwifi_init();
 

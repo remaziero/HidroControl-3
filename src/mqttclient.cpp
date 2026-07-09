@@ -1,124 +1,7 @@
-/*
 #include "mqttclient.h"
 #include "secrets.h"
-
-#include <stdio.h>
-#include <string.h>
-
-#include "esp_log.h"
-#include "esp_event.h"
-#include "mqtt_client.h"
-
-static const char *TAG = "MQTT";
-
-static esp_mqtt_client_handle_t s_client = nullptr;
-static bool s_connected = false;
-
-static const char *TOPIC_TELEMETRY = "hidrocontrol/ac220/telemetry";
-
-static void mqtt_event_handler(void *handler_args,
-                               esp_event_base_t base,
-                               int32_t event_id,
-                               void *event_data) {
-    (void)handler_args;
-    (void)base;
-
-    esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
-
-    switch ((esp_mqtt_event_id_t)event_id) {
-        case MQTT_EVENT_CONNECTED:
-            s_connected = true;
-            ESP_LOGI(TAG, "MQTT conectado ao broker");
-            break;
-
-        case MQTT_EVENT_DISCONNECTED:
-            s_connected = false;
-            ESP_LOGW(TAG, "MQTT desconectado");
-            break;
-
-        case MQTT_EVENT_ERROR:
-            ESP_LOGE(TAG, "MQTT_EVENT_ERROR");
-            break;
-
-        default:
-            break;
-    }
-}
-
-void mqttclient_init() {
-    ESP_LOGI(TAG, "Inicializando MQTT...");
-
-    esp_mqtt_client_config_t mqtt_cfg = {};
-    mqtt_cfg.broker.address.uri = MQTT_BROKER_URI;
-
-    s_client = esp_mqtt_client_init(&mqtt_cfg);
-    if (s_client == nullptr) {
-        ESP_LOGE(TAG, "Falha ao criar cliente MQTT");
-        return;
-    }
-
-    esp_mqtt_client_register_event(
-        s_client,
-        MQTT_EVENT_ANY,
-        mqtt_event_handler,
-        nullptr
-    );
-
-    esp_mqtt_client_start(s_client);
-
-    ESP_LOGI(TAG, "MQTT configurado para broker: %s", MQTT_BROKER_URI);
-}
-
-bool mqttclient_is_connected() {
-    return s_connected;
-}
-
-void mqttclient_publish_telemetry(const char* modo,
-                                  float fluxo_frio,
-                                  float fluxo_quente,
-                                  bool rele_frio,
-                                  bool rele_quente,
-                                  bool wifi_connected) {
-    if (!s_client || !s_connected) {
-        return;
-    }
-
-    char payload[256];
-
-    snprintf(payload, sizeof(payload),
-             "{"
-             "\"deviceId\":\"ac220\","
-             "\"fw\":\"V1.0.2\","
-             "\"modo\":\"%s\","
-             "\"flowFrio\":%.2f,"
-             "\"flowQuente\":%.2f,"
-             "\"releFrio\":%d,"
-             "\"releQuente\":%d,"
-             "\"wifi\":%d,"
-             "\"mqtt\":%d"
-             "}",
-             modo,
-             fluxo_frio,
-             fluxo_quente,
-             rele_frio ? 1 : 0,
-             rele_quente ? 1 : 0,
-             wifi_connected ? 1 : 0,
-             s_connected ? 1 : 0);
-
-    int msg_id = esp_mqtt_client_publish(
-        s_client,
-        TOPIC_TELEMETRY,
-        payload,
-        0,
-        1,
-        0
-    );
-
-    ESP_LOGI(TAG, "Publicado MQTT msg_id=%d payload=%s", msg_id, payload);
-}
-    */
-#include "mqttclient.h"
-#include "secrets.h"
+#include "deviceid.h"
+#include "timekeeper.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -126,6 +9,7 @@ void mqttclient_publish_telemetry(const char* modo,
 
 #include "esp_log.h"
 #include "esp_event.h"
+#include "esp_app_desc.h"
 #include "mqtt_client.h"
 
 static const char *TAG = "MQTT";
@@ -166,8 +50,10 @@ static void mqtt_event_handler(void *handler_args,
 
             if (event->error_handle) {
                 ESP_LOGE(TAG, "error_type=%d", event->error_handle->error_type);
-                ESP_LOGE(TAG, "esp_tls_last_esp_err=0x%x", event->error_handle->esp_tls_last_esp_err);
-                ESP_LOGE(TAG, "esp_tls_stack_err=0x%x", event->error_handle->esp_tls_stack_err);
+                ESP_LOGE(TAG, "esp_tls_last_esp_err=0x%x",
+                         event->error_handle->esp_tls_last_esp_err);
+                ESP_LOGE(TAG, "esp_tls_stack_err=0x%x",
+                         event->error_handle->esp_tls_stack_err);
                 ESP_LOGE(TAG, "esp_transport_sock_errno=%d (%s)",
                          event->error_handle->esp_transport_sock_errno,
                          strerror(event->error_handle->esp_transport_sock_errno));
@@ -186,7 +72,6 @@ void mqttclient_init()
 
     esp_mqtt_client_config_t mqtt_cfg = {};
     mqtt_cfg.broker.address.uri = MQTT_BROKER_URI;
-
     mqtt_cfg.session.keepalive = 60;
     mqtt_cfg.network.reconnect_timeout_ms = 5000;
     mqtt_cfg.network.timeout_ms = 10000;
@@ -230,12 +115,22 @@ void mqttclient_publish_telemetry(const char* modo,
         return;
     }
 
-    char payload[256];
+    char timestamp[40] = {0};
+    timekeeper_get_timestamp(timestamp, sizeof(timestamp));
+
+    int64_t epoch = timekeeper_get_epoch();
+
+    const esp_app_desc_t* app = esp_app_get_description();
+    const char* fw = app ? app->version : "unknown";
+
+    char payload[384];
 
     snprintf(payload, sizeof(payload),
              "{"
-             "\"deviceId\":\"ac220\","
-             "\"fw\":\"V1.0.2\","
+             "\"deviceId\":\"%s\","
+             "\"fw\":\"%s\","
+             "\"timestamp\":\"%s\","
+             "\"epoch\":%lld,"
              "\"modo\":\"%s\","
              "\"flowFrio\":%.2f,"
              "\"flowQuente\":%.2f,"
@@ -244,6 +139,10 @@ void mqttclient_publish_telemetry(const char* modo,
              "\"wifi\":%d,"
              "\"mqtt\":%d"
              "}",
+             deviceid_get(),
+             fw,
+             timestamp,
+             (long long)epoch,
              modo,
              fluxo_frio,
              fluxo_quente,
@@ -264,6 +163,8 @@ void mqttclient_publish_telemetry(const char* modo,
     if (msg_id < 0) {
         ESP_LOGE(TAG, "Falha ao publicar MQTT");
     } else {
-        ESP_LOGI(TAG, "Publicacao MQTT solicitada msg_id=%d payload=%s", msg_id, payload);
+        ESP_LOGI(TAG, "Publicacao MQTT solicitada msg_id=%d payload=%s",
+                 msg_id,
+                 payload);
     }
 }
