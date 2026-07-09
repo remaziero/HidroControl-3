@@ -9,7 +9,7 @@
 
 #include "esp_log.h"
 #include "esp_event.h"
-#include "esp_app_desc.h"
+//#include "esp_app_desc.h"
 #include "mqtt_client.h"
 
 static const char *TAG = "MQTT";
@@ -120,15 +120,15 @@ void mqttclient_publish_telemetry(const char* modo,
 
     int64_t epoch = timekeeper_get_epoch();
 
-    const esp_app_desc_t* app = esp_app_get_description();
-    const char* fw = app ? app->version : "unknown";
+    //const esp_app_desc_t* app = esp_app_get_description();
+    //const char* fw = app ? app->version : "unknown";
 
     char payload[384];
 
     snprintf(payload, sizeof(payload),
              "{"
              "\"deviceId\":\"%s\","
-             "\"fw\":\"%s\","
+             //"\"fw\":\"%s\","
              "\"timestamp\":\"%s\","
              "\"epoch\":%lld,"
              "\"modo\":\"%s\","
@@ -140,7 +140,7 @@ void mqttclient_publish_telemetry(const char* modo,
              "\"mqtt\":%d"
              "}",
              deviceid_get(),
-             fw,
+             //fw,
              timestamp,
              (long long)epoch,
              modo,
