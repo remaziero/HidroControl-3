@@ -17,6 +17,8 @@
 #include "netwifi.h"
 #include "mqttclient.h"
 
+#include "timekeeper.h"
+
 static const char *TAG = "MAIN";
 
 static uint32_t millis32() {
@@ -298,13 +300,30 @@ extern "C" void app_main(void) {
     ESP_LOGI(TAG, "HidroControl-3 V1.0.3 - OLED com WiFi/MQTT reais");
     ESP_LOGI(TAG, "AC220 / NodeMCU-32S board profile");
     ESP_LOGI(TAG, "====================================");
-
+/*
     reles_init();
     fluxo_init();
     modos_init();
     oled_init();
     netwifi_init();
     mqttclient_init();
+*/
+reles_init();
+fluxo_init();
+modos_init();
+oled_init();
+netwifi_init();
+
+ESP_LOGI(TAG, "Aguardando WiFi conectar antes de iniciar MQTT...");
+
+while (!netwifi_is_connected()) {
+    vTaskDelay(pdMS_TO_TICKS(500));
+}
+
+ESP_LOGI(TAG, "WiFi conectado. Iniciando timekeeper e MQTT.");
+
+timekeeper_init();
+mqttclient_init();
 
     xTaskCreate(
         task_hidrocontrol,
