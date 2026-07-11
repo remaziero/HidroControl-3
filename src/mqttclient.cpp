@@ -178,8 +178,9 @@ void mqttclient_publish_telemetry(const char* modo,
 }
     */
 
-    #include "mqttclient.h"
-#include "secrets.h"
+#include "mqttclient.h"
+//#include "secrets.h"
+#include "mqttconfig.h"
 #include "deviceid.h"
 #include "timekeeper.h"
 #include "modos.h"
@@ -200,16 +201,24 @@ static bool s_connected = false;
 
 // Mantido conforme a implementação atual.
 // Futuramente, também poderá ser individualizado pelo deviceId.
-static const char *TOPIC_TELEMETRY =
-    "hidrocontrol/ac220/telemetry";
-
-// Tamanhos máximos usados na recepção MQTT.
-static constexpr size_t TOPIC_BUFFER_SIZE   = 128;
+//static const char *TOPIC_TELEMETRY =
+//    "hidrocontrol/ac220/telemetry";
+static constexpr size_t TOPIC_BUFFER_SIZE = 128;
 static constexpr size_t PAYLOAD_BUFFER_SIZE = 64;
 
-// ---------------------------------------------------------------------
-// Montagem do tópico individual para alteração remota do modo
-// ---------------------------------------------------------------------
+static void build_telemetry_topic(char *buffer, size_t len)
+{
+    if (buffer == nullptr || len == 0) {
+        return;
+    }
+
+    snprintf(
+        buffer,
+        len,
+        "hidrocontrol/%s/telemetry",
+        deviceid_get()
+    );
+}
 
 static void build_modo_topic(char *buffer, size_t len)
 {
@@ -224,6 +233,30 @@ static void build_modo_topic(char *buffer, size_t len)
         deviceid_get()
     );
 }
+
+
+// Tamanhos máximos usados na recepção MQTT.
+//static constexpr size_t TOPIC_BUFFER_SIZE   = 128;
+//static constexpr size_t PAYLOAD_BUFFER_SIZE = 64;
+
+// ---------------------------------------------------------------------
+// Montagem do tópico individual para alteração remota do modo
+// ---------------------------------------------------------------------
+/*
+static void build_modo_topic(char *buffer, size_t len)
+{
+    if (buffer == nullptr || len == 0) {
+        return;
+    }
+
+    snprintf(
+        buffer,
+        len,
+        "hidrocontrol/%s/modo",
+        deviceid_get()
+    );
+}
+    */
 
 // ---------------------------------------------------------------------
 // Processamento do comando de modo recebido pelo MQTT
@@ -378,6 +411,7 @@ static void mqtt_event_handler(
     switch (
         static_cast<esp_mqtt_event_id_t>(event_id)
     ) {
+        /*
         case MQTT_EVENT_CONNECTED: {
             s_connected = true;
 
@@ -406,6 +440,49 @@ static void mqtt_event_handler(
                 );
             }
             else {
+                ESP_LOGI(
+                    TAG,
+                    "Subscribe solicitado: topico=%s msg_id=%d",
+                    topic_modo,
+                    msg_id
+                );
+            }
+
+            break;
+        }
+            */
+        case MQTT_EVENT_CONNECTED: {
+            s_connected = true;
+
+            const MqttConfig& config = mqttconfig_get();
+
+            ESP_LOGI(
+                TAG,
+                "MQTT conectado ao broker com usuario=%s clientId=%s",
+                config.username,
+                deviceid_get()
+            );
+
+            char topic_modo[TOPIC_BUFFER_SIZE] = {0};
+
+            build_modo_topic(
+                topic_modo,
+                sizeof(topic_modo)
+            );
+
+            int msg_id = esp_mqtt_client_subscribe(
+                s_client,
+                topic_modo,
+                1
+            );
+
+            if (msg_id < 0) {
+                ESP_LOGE(
+                    TAG,
+                    "Falha ao solicitar subscribe em: %s",
+                    topic_modo
+                );
+            } else {
                 ESP_LOGI(
                     TAG,
                     "Subscribe solicitado: topico=%s msg_id=%d",
@@ -501,15 +578,21 @@ static void mqtt_event_handler(
 // ---------------------------------------------------------------------
 // Inicialização do cliente MQTT
 // ---------------------------------------------------------------------
-
+/*
 void mqttclient_init()
 {
     ESP_LOGI(TAG, "Inicializando MQTT...");
 
     esp_mqtt_client_config_t mqtt_cfg = {};
 
-    mqtt_cfg.broker.address.uri =
-        MQTT_BROKER_URI;
+    mqtt_cfg.broker.address.uri = MQTT_BROKER_URI;
+    if (MQTT_USERNAME[0] != '\0') {
+            mqtt_cfg.credentials.username = MQTT_USERNAME;
+        }
+
+        if (MQTT_PASSWORD[0] != '\0') {
+            mqtt_cfg.credentials.authentication.password = MQTT_PASSWORD;
+        }
 
     mqtt_cfg.session.keepalive = 60;
 
@@ -518,6 +601,13 @@ void mqttclient_init()
 
     mqtt_cfg.network.timeout_ms =
         10000;
+
+    if (MQTT_USERNAME[0] == '\0') {
+        ESP_LOGW(TAG, "MQTT sem autenticacao — modo temporario de desenvolvimento");
+    } else {
+        ESP_LOGI(TAG, "MQTT com autenticacao habilitada para usuario: %s",
+                MQTT_USERNAME);
+    }
 
     s_client =
         esp_mqtt_client_init(&mqtt_cfg);
@@ -562,6 +652,77 @@ void mqttclient_init()
         TAG,
         "MQTT configurado para broker: %s",
         MQTT_BROKER_URI
+    );
+}
+*/
+void mqttclient_init()
+{
+    const MqttConfig& config = mqttconfig_get();
+
+    ESP_LOGI(TAG, "Inicializando MQTT...");
+    ESP_LOGI(TAG, "Broker MQTT: %s", config.uri);
+    ESP_LOGI(TAG, "Usuario MQTT: %s", config.username);
+
+    esp_mqtt_client_config_t mqtt_cfg = {};
+
+    mqtt_cfg.broker.address.uri = config.uri;
+
+    mqtt_cfg.credentials.client_id = deviceid_get();
+    mqtt_cfg.credentials.username = config.username;
+    mqtt_cfg.credentials.authentication.password = config.password;
+
+    mqtt_cfg.session.keepalive = config.keepalive_seconds;
+
+    mqtt_cfg.network.reconnect_timeout_ms =
+        config.reconnect_timeout_ms;
+
+    mqtt_cfg.network.timeout_ms =
+        config.network_timeout_ms;
+
+    s_client = esp_mqtt_client_init(&mqtt_cfg);
+
+    if (s_client == nullptr) {
+        ESP_LOGE(TAG, "Falha ao criar cliente MQTT");
+        return;
+    }
+
+    esp_err_t err = esp_mqtt_client_register_event(
+        s_client,
+        MQTT_EVENT_ANY,
+        mqtt_event_handler,
+        nullptr
+    );
+
+    if (err != ESP_OK) {
+        ESP_LOGE(
+            TAG,
+            "Falha ao registrar eventos MQTT: %s",
+            esp_err_to_name(err)
+        );
+
+        esp_mqtt_client_destroy(s_client);
+        s_client = nullptr;
+        return;
+    }
+
+    err = esp_mqtt_client_start(s_client);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(
+            TAG,
+            "Falha ao iniciar cliente MQTT: %s",
+            esp_err_to_name(err)
+        );
+
+        esp_mqtt_client_destroy(s_client);
+        s_client = nullptr;
+        return;
+    }
+
+    ESP_LOGI(
+        TAG,
+        "Cliente MQTT iniciado com clientId=%s",
+        deviceid_get()
     );
 }
 
@@ -653,9 +814,16 @@ void mqttclient_publish_telemetry(
         return;
     }
 
+    char topic_telemetry[TOPIC_BUFFER_SIZE] = {0};
+
+    build_telemetry_topic(
+        topic_telemetry,
+        sizeof(topic_telemetry)
+    );
+
     int msg_id = esp_mqtt_client_publish(
         s_client,
-        TOPIC_TELEMETRY,
+        topic_telemetry,
         payload,
         0,
         1,
@@ -663,15 +831,17 @@ void mqttclient_publish_telemetry(
     );
 
     if (msg_id < 0) {
-        ESP_LOGE(
-            TAG,
-            "Falha ao publicar MQTT"
-        );
+    ESP_LOGE(
+        TAG,
+        "Falha ao publicar MQTT no topico: %s",
+        topic_telemetry
+    );
     }
     else {
         ESP_LOGI(
             TAG,
-            "Publicacao MQTT solicitada msg_id=%d payload=%s",
+            "Publicacao MQTT solicitada: topico=%s msg_id=%d payload=%s",
+            topic_telemetry,
             msg_id,
             payload
         );
