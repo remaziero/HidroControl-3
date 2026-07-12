@@ -1,0 +1,335 @@
+Perfeito. Vamos adotar essa arquitetura de laboratório.
+
+Arquitetura do laboratório
+
+Na mesma máquina Linux Mint:
+
+ESP32 / AC220
+      │
+      │ MQTT/TLS
+      ▼
+Mosquitto Público de Laboratório
+Portas:
+1883  sem TLS, apenas teste inicial
+8883  com TLS
+      │
+      │ Bridge MQTT
+      ▼
+Mosquitto Privado de Laboratório
+Portas:
+2883  sem TLS, somente local
+2884  com TLS, se necessário
+Regras
+
+O broker público:
+
+aceita conexões dos dispositivos;
+exige usuário e senha;
+terá ACL;
+será o único ponto exposto futuramente;
+encaminhará dados ao broker privado por bridge.
+
+O broker privado:
+
+não será exposto à Internet;
+receberá dados somente pela bridge;
+concentrará armazenamento, tratamento, dashboard e API;
+poderá aceitar apenas conexões locais.
+Sequência firme
+
+Vamos implementar em etapas:
+
+instalar o Mosquitto e os clientes;
+criar duas pastas de configuração independentes;
+subir o broker público em 1883;
+subir o broker privado em 2883;
+validar publicação e subscribe separadamente;
+criar usuários e senhas;
+aplicar ACL;
+criar certificados;
+ativar TLS no público em 8883;
+testar o ESP32 com CA própria;
+criar a bridge público → privado;
+validar que o broker privado não aceita acesso externo;
+só depois migrar o broker público para VPS.
+
+~/mqtt-lab
+│
+├── broker-publico
+│      ├── conf
+│      ├── data
+│      ├── log
+│      ├── certs
+│      └── passwords
+│
+├── broker-privado
+│      ├── conf
+│      ├── data
+│      ├── log
+│      ├── certs
+│      └── passwords
+│
+├── bridge
+│
+├── tools
+│
+└── backup
+
+
+# Laboratório MQTT - HidroControl-3
+
+## Objetivo
+
+Este laboratório tem como objetivo desenvolver, validar e documentar toda a infraestrutura MQTT utilizada pelo projeto HidroControl-3, utilizando exclusivamente softwares livres.
+
+O ambiente é composto por dois brokers Mosquitto independentes executando na mesma máquina Linux.
+
+Após validação completa, o broker público será migrado para uma VPS Linux, mantendo exatamente a mesma arquitetura.
+
+---
+
+# Arquitetura
+
+                ESP32 / AC220
+                      │
+                      │ MQTT
+                      ▼
+        Broker Público (Mosquitto)
+               Laboratório
+                      │
+                      │ Bridge MQTT
+                      ▼
+        Broker Privado (Mosquitto)
+                      │
+        ├── Banco de Dados
+        ├── Dashboard
+        ├── API Android
+        └── Tratamento dos dados
+
+---
+
+# Estrutura de diretórios
+
+mqtt-lab/
+
+├── broker-publico/
+
+│   ├── conf/
+
+│   ├── data/
+
+│   ├── log/
+
+│   ├── certs/
+
+│   └── passwords/
+
+│
+
+├── broker-privado/
+
+│   ├── conf/
+
+│   ├── data/
+
+│   ├── log/
+
+│   ├── certs/
+
+│   └── passwords/
+
+│
+
+├── bridge/
+
+├── tools/
+
+└── backup/
+
+---
+
+# Portas
+
+Broker Público
+
+1883  MQTT (desenvolvimento)
+
+8883  MQTT TLS
+
+Broker Privado
+
+2883  MQTT interno
+
+2884  MQTT TLS interno (futuro)
+
+---
+
+# Usuários
+
+## Broker Público
+
+(Em desenvolvimento)
+
+## Broker Privado
+
+(Em desenvolvimento)
+
+---
+
+# ACL
+
+Será implementada por dispositivo.
+
+Cada equipamento poderá:
+
+Publicar:
+
+hidrocontrol/<deviceId>/telemetry
+
+hidrocontrol/<deviceId>/status
+
+Assinar:
+
+hidrocontrol/<deviceId>/modo
+
+hidrocontrol/<deviceId>/command
+
+Nenhum dispositivo poderá acessar tópicos pertencentes a outro deviceId.
+
+---
+
+# Bridge
+
+Fluxo previsto:
+
+Broker Público
+
+↓
+
+Broker Privado
+
+A bridge será iniciada pelo Broker Privado.
+
+Não haverá acesso direto da Internet ao Broker Privado.
+
+---
+
+# Certificados
+
+Durante o desenvolvimento serão utilizados certificados próprios.
+
+Na migração para produção será utilizada a mesma arquitetura.
+
+---
+
+# Segurança
+
+Objetivos:
+
+✔ TLS
+
+✔ Usuário e senha
+
+✔ ACL
+
+✔ Bridge segura
+
+✔ Broker Privado sem acesso externo
+
+✔ Logs
+
+✔ Auditoria
+
+✔ Backup
+
+---
+
+# Sequência de desenvolvimento
+
+Fase 1
+
+☐ Broker Público
+
+☐ Broker Privado
+
+☐ Publicação
+
+☐ Subscribe
+
+Fase 2
+
+☐ Usuários
+
+☐ Senhas
+
+☐ ACL
+
+Fase 3
+
+☐ TLS
+
+☐ Certificados
+
+☐ Bridge
+
+Fase 4
+
+☐ Dashboard
+
+☐ Banco de Dados
+
+☐ API Android
+
+☐ OTA
+
+---
+
+Projeto HidroControl-3
+
+Desenvolvimento em ESP-IDF
+
+Arquitetura MQTT profissional
+
+2026
+
+Nenhuma configuração será feita diretamente no /etc/mosquitto.
+
+Todo o laboratório ficará autocontido em:
+
+~/mqtt-lab
+
+Ou seja:
+
+arquivos .conf;
+certificados;
+senhas;
+ACLs;
+logs;
+bancos de persistência;
+scripts de inicialização;
+scripts de backup;
+
+ficarão todos dentro do laboratório.
+
+Essa decisão traz duas vantagens enormes:
+
+Portabilidade: basta copiar a pasta mqtt-lab para outra máquina Linux para recriar praticamente todo o ambiente.
+Migração para produção: quando chegar a hora de configurar a VPS, grande parte dos arquivos poderá ser reutilizada, reduzindo o risco de diferenças entre o ambiente de desenvolvimento e o de produção.
+
+Nossa disciplina de desenvolvimento
+
+A partir de agora seguiremos exatamente este ciclo:
+
+Alteração
+      ↓
+Iniciar broker
+      ↓
+Testar
+      ↓
+Documentar README
+      ↓
+Backup
+      ↓
+Próxima etapa
+
+Nenhuma funcionalidade nova será implementada sem antes a anterior estar funcionando e documentada.

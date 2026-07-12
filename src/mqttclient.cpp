@@ -194,6 +194,8 @@ void mqttclient_publish_telemetry(const char* modo,
 #include "esp_event.h"
 #include "mqtt_client.h"
 
+#include "esp_crt_bundle.h"
+
 static const char *TAG = "MQTT";
 
 static esp_mqtt_client_handle_t s_client = nullptr;
@@ -666,6 +668,8 @@ void mqttclient_init()
     esp_mqtt_client_config_t mqtt_cfg = {};
 
     mqtt_cfg.broker.address.uri = config.uri;
+
+    mqtt_cfg.broker.verification.crt_bundle_attach = esp_crt_bundle_attach;
 
     mqtt_cfg.credentials.client_id = deviceid_get();
     mqtt_cfg.credentials.username = config.username;
