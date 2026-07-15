@@ -333,3 +333,97 @@ Backup
 Próxima etapa
 
 Nenhuma funcionalidade nova será implementada sem antes a anterior estar funcionando e documentada.
+
+HidroControl-3
+│
+├── docs/
+│
+├── include/
+│
+├── src/
+│
+├── test/
+│
+├── infra/
+│   │
+│   └── mqtt-lab/
+│       │
+│       ├── README.md
+│       │
+│       ├── broker-publico/
+│       │   ├── conf/
+│       │   ├── data/
+│       │   ├── log/
+│       │   ├── certs/
+│       │   └── passwords/
+│       │
+│       ├── broker-privado/
+│       │   ├── conf/
+│       │   ├── data/
+│       │   ├── log/
+│       │   ├── certs/
+│       │   └── passwords/
+│       │
+│       ├── bridge/
+│       │
+│       ├── backup/
+│       │
+│       └── tools/
+│
+├── platformio.ini
+│
+├── sdkconfig.defaults
+│
+└── README.md
+
+
+Gostaria de estabelecer uma convenção para todo o HidroControl.
+
+Firmware
+include/
+src/
+Infraestrutura
+infra/
+Documentação
+docs/
+Ferramentas
+tools/
+
+Organização do laboratório MQTT
+
+Dentro de infra/mqtt-lab, teremos:
+
+broker-publico
+
+Responsável por:
+
+receber conexões dos ESP32;
+autenticação;
+TLS;
+ACL;
+bridge.
+broker-privado
+
+Responsável por:
+
+armazenamento;
+dashboard;
+banco de dados;
+API;
+integração futura.
+bridge
+
+Documentação e scripts da bridge.
+
+tools
+
+Scripts auxiliares:
+
+criação de usuários;
+geração de certificados;
+backup;
+restauração.
+backup
+
+Cópias de segurança do laboratório.
+
