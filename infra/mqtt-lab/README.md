@@ -24,3 +24,32 @@ ESP32 / AC220
 - O armazenamento e tratamento ocorrerão somente no ambiente privado.
 - A evolução será incremental, testada e documentada.
 
+## Etapa 1 - Broker Público
+
+Objetivo:
+Disponibilizar um broker MQTT funcional para o laboratório.
+
+Status:
+✔ concluído
+
+Características:
+
+- Mosquitto 2.0.18
+- Porta 1883
+- Sem TLS
+- Sem usuários
+- Sem ACL
+- Sem bridge
+- allow_anonymous=true
+- Persistência desabilitada
+
+Testes executados:
+
+✔ Broker iniciou corretamente.
+
+✔ mosquitto_sub conectado.
+
+✔ mosquitto_pub publicou mensagem.
+
+✔ Mensagem recebida com sucesso.
+
