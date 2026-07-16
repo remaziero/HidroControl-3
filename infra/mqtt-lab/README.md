@@ -111,3 +111,19 @@ Os brokers Público e Privado estão operacionais e independentes.
 
 A próxima etapa será a criação de uma bridge unidirecional do Broker
 Público para o Broker Privado.
+
+## Etapa 3 — Bridge Público para Privado
+
+Status: concluída e testada.
+
+Arquitetura:
+
+```text
+Cliente MQTT
+    |
+    v
+Broker Público :1883
+    |
+    | Bridge MQTT unidirecional
+    v
+Broker Privado :1884

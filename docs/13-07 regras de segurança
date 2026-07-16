@@ -427,3 +427,249 @@ backup
 
 Cópias de segurança do laboratório.
 
+Em 15/07/26 às 20:53
+Situação do projeto
+
+Até aqui temos:
+
+✔ Estrutura do laboratório criada
+✔ README do laboratório
+✔ Versionado no Git
+✔ Mosquitto instalado
+✔ Broker Público iniciado pelo arquivo do projeto
+✔ Publish funcionando
+✔ Subscribe funcionando
+
+Ainda não temos:
+
+□ Persistência
+□ Broker Privado
+□ Bridge
+□ Usuários
+□ ACL
+□ TLS
+□ Certificados
+Minha sugestão para o próximo passo
+
+Agora começa uma decisão de arquitetura.
+
+Opção A (minha recomendação)
+
+Documentar e fazer um commit agora.
+
+Assim encerramos oficialmente esta etapa.
+
+Exemplo de commit:
+
+git add .
+git commit -m "mqtt-lab: configura broker publico e valida publish/subscribe"
+git push origin feature/mqtt-lab
+
+Depois iniciamos uma nova etapa para o Broker Privado.
+
+Vantagens:
+
+cada commit representa uma funcionalidade completa;
+se algo der errado na Bridge, sempre poderemos voltar a este ponto estável;
+o histórico do Git fica extremamente organizado.
+
+É exatamente a filosofia que definimos para o HIDROCONTROL-3.
+
+Opção B
+
+Continuar imediatamente para o Broker Privado.
+
+Eu não faria isso.
+
+Nossa regra foi:
+
+Implementar → Testar → Documentar → Commit → Próxima etapa
+
+Se a quebrarmos logo na primeira etapa, perderemos a disciplina arquitetural que decidimos seguir.
+
+O que eu faria
+Etapa 5.1
+
+Atualizar o README.md do laboratório acrescentando algo como:
+
+## Etapa 1 - Broker Público
+
+Objetivo:
+Disponibilizar um broker MQTT funcional para o laboratório.
+
+Status:
+✔ concluído
+
+Características:
+
+- Mosquitto 2.0.18
+- Porta 1883
+- Sem TLS
+- Sem usuários
+- Sem ACL
+- Sem bridge
+- allow_anonymous=true
+- Persistência desabilitada
+
+Testes executados:
+
+✔ Broker iniciou corretamente.
+
+✔ mosquitto_sub conectado.
+
+✔ mosquitto_pub publicou mensagem.
+
+✔ Mensagem recebida com sucesso.
+Etapa 5.2
+
+Commit:
+
+git add .
+git commit -m "mqtt-lab: configura broker publico e valida publish/subscribe"
+git push origin feature/mqtt-lab
+Depois iniciaremos uma etapa completamente nova
+
+E aí sim começaremos:
+
+Broker Público
+        │
+        │
+        ▼
+Broker Privado
+
+Mas, diferentemente do primeiro, o Broker Privado já nascerá preparado para futuramente receber a Bridge, o banco de dados, o dashboard e a API Android.
+
+Uma pequena sugestão de melhoria arquitetural
+
+Gostaria de propor um pequeno ajuste antes de criarmos o Broker Privado.
+
+Atualmente temos:
+
+broker-publico/
+    conf/
+    data/
+    log/
+    certs/
+    passwords/
+
+Eu acrescentaria também:
+
+broker-publico/
+    conf/
+    data/
+    log/
+    certs/
+    passwords/
+    acl/
+
+e o mesmo para o Broker Privado:
+
+broker-privado/
+    conf/
+    data/
+    log/
+    certs/
+    passwords/
+    acl/
+
+Mesmo que ainda não utilizemos ACL, esse diretório já deixaria a estrutura definitiva preparada para as próximas fases, evitando reorganizações futuras.
+
+Na minha avaliação, o laboratório está evoluindo exatamente como planejamos: cada etapa é pequena, validada e versionada, o que dará uma base muito sólida para quando chegarmos à Bridge MQTT e ao TLS.
+
+Nesta etapa já fizemos os dois brokers independentes e testados, mas ainda sem comunicação entre eles. A próxima etapa, depois de documentar e fazer o commit, será exclusivamente a bridge do Broker Público para o Broker Privado.
+Status: concluída e testada.
+
+Características:
+
+- Mosquitto 2.0.18;
+- listener na porta 1883;
+- acesso anônimo temporariamente permitido;
+- sem TLS;
+- sem usuários;
+- sem ACL ativa;
+- sem persistência;
+- sem bridge.
+
+Teste realizado:
+
+- conexão com `mosquitto_sub`;
+- publicação com `mosquitto_pub`;
+- recebimento da mensagem no tópico `hidrocontrol/lab/teste`.
+
+## Etapa 2 — Broker Privado
+
+Status: concluída e testada.
+
+Características:
+
+- Mosquitto 2.0.18;
+- listener na porta 1884;
+- acesso anônimo temporariamente permitido;
+- sem TLS;
+- sem usuários;
+- sem ACL ativa;
+- sem persistência;
+- sem bridge.
+
+Teste realizado:
+
+- conexão com `mosquitto_sub`;
+- publicação com `mosquitto_pub`;
+- recebimento da mensagem no tópico
+  `hidrocontrol/privado/lab/teste`.
+
+## Estado atual do laboratório
+
+Os brokers Público e Privado estão operacionais e independentes.
+
+| Componente | Porta | Situação |
+|---|---:|---|
+| Broker Público | 1883 | Operacional |
+| Broker Privado | 1884 | Operacional |
+| Bridge | — | Ainda não configurada |
+| Usuários | — | Ainda não configurados |
+| ACL | — | Ainda não configurada |
+| TLS | — | Ainda não configurado |
+
+A próxima etapa será a criação de uma bridge unidirecional do Broker
+Público para o Broker Privado.
+
+3. Criar a bridge Público → Privado
+
+A primeira bridge terá apenas esta função:
+
+Publicação no Broker Público:1883
+              │
+              │ bridge unidirecional
+              ▼
+Recebimento no Broker Privado:1884
+
+Não teremos fluxo no sentido contrário.
+
+A bridge está estabelecida com sucesso.
+
+Neste momento, a arquitetura do laboratório já é:
+
+                MQTT
+        +------------------+
+        |  Broker Público  |
+        |      :1883       |
+        +------------------+
+                 │
+                 │ Bridge MQTT
+                 ▼
+        +------------------+
+        | Broker Privado   |
+        |      :1884       |
+        +------------------+
+
+Até este ponto, o laboratório está seguindo exatamente o plano que definimos no início:
+
+✅ Broker Público
+✅ Broker Privado
+✅ Bridge estabelecida
+⏳ Validar tráfego através da bridge
+⏳ Documentar
+⏳ Commit
+⏳ Próxima etapa: autenticação, ACL e, posteriormente, TLS.
+
