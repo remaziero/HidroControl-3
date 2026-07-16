@@ -673,3 +673,21 @@ Até este ponto, o laboratório está seguindo exatamente o plano que definimos 
 ⏳ Commit
 ⏳ Próxima etapa: autenticação, ACL e, posteriormente, TLS.
 
+Fizemos o commit:
+
+git commit -m "infra(mqtt): configura e valida bridge publico para privado"
+
+Enviamos para o github:
+
+git push origin feature/mqtt-lab
+
+Próxima sequência
+
+Depois desse commit, seguiremos em etapas separadas:
+
+1. Autenticação por usuário e senha
+2. ACL
+3. TLS e certificados
+4. Autenticação da bridge
+5. Bridge segura com TLS
+
