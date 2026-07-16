@@ -1,4 +1,4 @@
-# Laboratório MQTT — HidroControl-3
+.# Laboratório MQTT — HidroControl-3
 
 Ambiente autocontido para desenvolvimento e validação da infraestrutura MQTT.
 
@@ -53,3 +53,61 @@ Testes executados:
 
 ✔ Mensagem recebida com sucesso.
 
+## Etapa 1 — Broker Público
+
+Status: concluída e testada.
+
+Características:
+
+- Mosquitto 2.0.18;
+- listener na porta 1883;
+- acesso anônimo temporariamente permitido;
+- sem TLS;
+- sem usuários;
+- sem ACL ativa;
+- sem persistência;
+- sem bridge.
+
+Teste realizado:
+
+- conexão com `mosquitto_sub`;
+- publicação com `mosquitto_pub`;
+- recebimento da mensagem no tópico `hidrocontrol/lab/teste`.
+
+## Etapa 2 — Broker Privado
+
+Status: concluída e testada.
+
+Características:
+
+- Mosquitto 2.0.18;
+- listener na porta 1884;
+- acesso anônimo temporariamente permitido;
+- sem TLS;
+- sem usuários;
+- sem ACL ativa;
+- sem persistência;
+- sem bridge.
+
+Teste realizado:
+
+- conexão com `mosquitto_sub`;
+- publicação com `mosquitto_pub`;
+- recebimento da mensagem no tópico
+  `hidrocontrol/privado/lab/teste`.
+
+## Estado atual do laboratório
+
+Os brokers Público e Privado estão operacionais e independentes.
+
+| Componente | Porta | Situação |
+|---|---:|---|
+| Broker Público | 1883 | Operacional |
+| Broker Privado | 1884 | Operacional |
+| Bridge | — | Ainda não configurada |
+| Usuários | — | Ainda não configurados |
+| ACL | — | Ainda não configurada |
+| TLS | — | Ainda não configurado |
+
+A próxima etapa será a criação de uma bridge unidirecional do Broker
+Público para o Broker Privado.
