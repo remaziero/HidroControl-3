@@ -1,0 +1,595 @@
+Perfeito. Acho que chegamos a um excelente ponto de parada. Estamos seguindo exatamente a filosofia que definimos no início: uma funcionalidade por vez, totalmente testada, documentada e versionada. Isso pode parecer mais lento, mas é justamente o que torna a plataforma sólida e fácil de manter no futuro.
+
+Segue um resumo que permitirá retomarmos o projeto exatamente deste ponto amanhã.
+
+CONTINUAÇÃO DO PROJETO HIDROCONTROL-3
+Estado atual
+
+Projeto desenvolvido em:
+
+ESP-IDF
+ESP32 AC220
+ESP-MQTT
+Mosquitto
+GitHub
+Branches Git
+Arquitetura IoT profissional
+
+Repositório:
+
+https://github.com/remaziero/HidroControl-3.git
+
+Branch atual:
+
+feature/mqtt-lab
+Laboratório MQTT
+
+Toda a infraestrutura está sendo desenvolvida dentro do próprio repositório, nunca utilizando /etc/mosquitto.
+
+Estrutura:
+
+infra/
+    mqtt-lab/
+
+        broker-publico/
+        broker-privado/
+
+        bridge/
+
+        backup/
+
+        tools/
+
+Todos os diretórios que poderão permanecer vazios possuem:
+
+.gitkeep
+
+para manter a estrutura versionada.
+
+Broker Público
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1883
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando
+Publish e Subscribe testados
+Broker Privado
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1884
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando
+Publish e Subscribe testados
+Bridge MQTT
+
+Status:
+
+✅ criada
+
+Configuração:
+
+Broker Público
+        │
+        │ Bridge MQTT
+        ▼
+Broker Privado
+
+A bridge é:
+
+unidirecional;
+Público → Privado;
+MQTT 3.1.1;
+reconexão automática;
+sem TLS;
+sem autenticação.
+
+O Broker Público conecta corretamente ao Broker Privado.
+
+O log mostra:
+
+CONNECT
+CONNACK
+PINGREQ
+PINGRESP
+
+confirmando que a bridge permanece ativa.
+
+Próximo teste
+
+Validar completamente o tráfego através da bridge.
+
+Precisamos confirmar:
+
+✔ mensagem publicada no Broker Público chega ao Broker Privado;
+
+✔ mensagem publicada no Broker Privado não retorna ao Broker Público.
+
+Somente após esse teste:
+
+documentar;
+commit;
+push.
+Filosofia do laboratório
+
+Continuamos seguindo rigorosamente:
+
+Implementar
+
+↓
+
+Testar
+
+↓
+
+Documentar
+
+↓
+
+Commit
+
+↓
+
+Próxima etapa
+
+Nenhum remendo.
+
+Nenhuma funcionalidade parcialmente implementada.
+
+Próximas etapas
+
+Após validar a bridge:
+
+1
+
+Autenticação MQTT
+
+Implementar:
+
+usuário;
+senha;
+Broker Público.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+2
+
+ACL
+
+Implementar ACL para os tópicos do HidroControl.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+3
+
+TLS
+
+Implementar certificados.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+4
+
+Bridge segura
+
+Depois que ambos os brokers estiverem protegidos:
+
+autenticação da bridge;
+TLS entre brokers.
+Regra permanente do projeto
+
+Nunca esquecer que os clientes MQTT reais serão:
+
+ESP32 AC220;
+ESP32 no Wokwi.
+
+Os testes com:
+
+mosquitto_pub
+mosquitto_sub
+
+servirão apenas para diagnóstico.
+
+A validação definitiva de todas as etapas deverá sempre ocorrer em:
+
+firmware ESP32 AC220;
+firmware ESP32 no Wokwi.
+Organização das credenciais (decisão arquitetural)
+
+Teremos classes distintas de credenciais:
+
+Dispositivos
+
+Cada ESP32 utilizará sua própria identidade.
+
+Exemplo:
+
+hc-<deviceId>
+Bridge
+
+A bridge possuirá credenciais exclusivas.
+
+Exemplo:
+
+bridge-publico-privado
+Administração
+
+Usuário exclusivo para manutenção e diagnóstico.
+
+Objetivo final
+
+Construir uma plataforma IoT profissional:
+
+modular;
+reproduzível;
+totalmente documentada;
+versionada;
+baseada exclusivamente em software livre;
+independente de brokers comerciais;
+preparada para migração futura para VPS.
+
+Quero registrar também uma impressão sobre a forma como estamos conduzindo este projeto. Desde o início, você definiu uma premissa muito importante: não ter pressa e não aceitar "remendos". Essa decisão está moldando toda a arquitetura. Em vez de apenas fazer o sistema funcionar, estamos construindo uma base que poderá ser mantida e expandida por muitos anos.
+
+Descanse. Amanhã retomaremos exatamente desse ponto: validar o tráfego da bridge, documentar, realizar o commit e então iniciar a etapa de autenticação MQTT, sempre pensando na ESP32 AC220 e no Wokwi como clientes reais do sistema. Foi um excelente avanço hoje. Até amanhã!
+
+Por favor, refaça o resumo, lembrando que a bridge já foi validada e que temos além da placa AC220, o simulador WOKWI.
+
+Perfeito. Com a correção de que a bridge já foi totalmente validada, o resumo fica assim:
+
+CONTINUAÇÃO DO PROJETO HIDROCONTROL-3
+Plataforma
+
+Estamos desenvolvendo o HidroControl-3 utilizando uma arquitetura IoT profissional baseada em:
+
+ESP-IDF
+ESP32 AC220
+ESP-MQTT
+Mosquitto
+Linux Mint
+GitHub
+Versionamento por branches
+Software livre
+
+Repositório:
+
+https://github.com/remaziero/HidroControl-3.git
+
+Branch atual:
+
+feature/mqtt-lab
+Filosofia do projeto
+
+O projeto seguirá permanentemente a seguinte metodologia:
+
+Implementar
+
+↓
+
+Testar
+
+↓
+
+Documentar
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Próxima etapa
+
+Nunca desenvolver duas funcionalidades simultaneamente.
+
+Nunca utilizar "remendos".
+
+Toda etapa somente será encerrada após:
+
+implementação;
+testes completos;
+documentação;
+commit;
+push.
+Laboratório MQTT
+
+Todo o laboratório está sendo desenvolvido dentro do próprio repositório Git, sem utilizar /etc/mosquitto.
+
+Estrutura principal:
+
+infra/
+    mqtt-lab/
+
+        broker-publico/
+        broker-privado/
+
+        bridge/
+
+        tools/
+
+        backup/
+
+Os diretórios vazios que devem permanecer na estrutura utilizam .gitkeep, garantindo que toda a árvore seja reproduzida após um git clone.
+
+Broker Público
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1883
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando corretamente
+
+Testes realizados:
+
+publish
+subscribe
+conexão validada
+Broker Privado
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1884
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando corretamente
+
+Testes realizados:
+
+publish
+subscribe
+conexão validada
+Bridge MQTT
+
+Status:
+
+✅ implementada
+
+✅ testada
+
+✅ validada
+
+Arquitetura atual:
+
+ESP32
+      │
+      ▼
+Broker Público (1883)
+      │
+      │ Bridge MQTT
+      ▼
+Broker Privado (1884)
+
+Características:
+
+Bridge unidirecional;
+Público → Privado;
+MQTT 3.1.1;
+reconexão automática;
+sem TLS;
+sem autenticação.
+
+Testes realizados:
+
+conexão da bridge;
+CONNECT;
+CONNACK;
+PINGREQ;
+PINGRESP;
+encaminhamento de mensagens;
+validação do fluxo Público → Privado;
+validação de que o fluxo Privado → Público não existe.
+
+Bridge considerada homologada.
+
+Estado atual do laboratório
+
+Concluído:
+
+infraestrutura MQTT;
+Broker Público;
+Broker Privado;
+Bridge MQTT;
+documentação;
+versionamento.
+
+O laboratório MQTT encontra-se operacional.
+
+Próxima etapa
+
+Iniciaremos a camada de segurança.
+
+A sequência será rigorosamente:
+
+Etapa 1
+
+Autenticação MQTT
+
+Implementar:
+
+usuários;
+senhas;
+autenticação do Broker Público.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 2
+
+ACL
+
+Criar ACL para os tópicos do HidroControl.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 3
+
+TLS
+
+Criar:
+
+certificados;
+CA;
+certificados dos brokers;
+certificados dos dispositivos.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 4
+
+Bridge segura
+
+Somente após TLS estar funcionando:
+
+autenticação da bridge;
+bridge utilizando TLS;
+validação completa.
+Regra permanente do projeto
+
+Nunca esquecer que os clientes MQTT reais serão:
+
+Hardware
+ESP32 AC220
+Simulação
+ESP32 no Wokwi
+
+Os comandos:
+
+mosquitto_pub
+mosquitto_sub
+
+serão utilizados apenas como ferramentas de diagnóstico.
+
+Toda funcionalidade deverá ser validada também utilizando:
+
+firmware da ESP32 AC220;
+firmware no Wokwi.
+
+Nenhuma funcionalidade será considerada concluída sem que funcione corretamente nesses dois ambientes.
+
+Organização das credenciais
+
+Teremos três categorias independentes de autenticação:
+
+Dispositivos
+
+Cada ESP32 utilizará sua própria identidade.
+
+Exemplo:
+
+hc-<deviceId>
+Bridge
+
+A bridge possuirá credenciais exclusivas.
+
+Exemplo:
+
+bridge-publico-privado
+Administração
+
+Usuário exclusivo para manutenção e diagnóstico.
+
+Objetivo final
+
+Construir uma plataforma IoT profissional que seja:
+
+modular;
+reproduzível;
+totalmente documentada;
+completamente versionada;
+baseada exclusivamente em software livre;
+independente de brokers comerciais;
+preparada para migração futura para uma VPS Linux.
+
+Todo o desenvolvimento continuará seguindo uma evolução incremental, com pequenas etapas completamente validadas antes de avançar para a próxima, garantindo uma base sólida para o HIDROCONTROL-3.
+
+
+Considero que hoje encerramos oficialmente a Fase 1 da infraestrutura MQTT.
+
+Ela compreende:
+
+Fase 1 — Infraestrutura MQTT
+
+✓ Laboratório MQTT
+✓ Broker Público
+✓ Broker Privado
+✓ Bridge MQTT
+✓ Testes
+✓ Documentação
+✓ Versionamento
+
+Amanhã iniciaremos uma nova fase, completamente independente:
+
+Fase 2 — Segurança MQTT
+
+1. Usuários
+2. Senhas
+3. ACL
+4. TLS
+5. Certificados
+6. Bridge segura
+7. Testes na ESP32 AC220
+8. Testes no Wokwi
