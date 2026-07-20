@@ -593,3 +593,49 @@ Fase 2 — Segurança MQTT
 6. Bridge segura
 7. Testes na ESP32 AC220
 8. Testes no Wokwi
+
+Iniciamos a etapa 2 segurança
+/etc/mosquitto/passwd 
+    passwd hidrocontrol_device
+    usuário: remaziero
+    senha: camila
+
+    usuário da bridge: camilab
+    passwd mqtt_admin: camilaa
+
+    testado sem senha e recusado e testado com senha ok
+
+    Situação atual da Fase 2
+
+Temos o seguinte cenário:
+
+                 INTERNET
+                     │
+                     │
+              Broker Público
+        ┌────────────────────────┐
+        │  ✔ Usuários            │
+        │  ✔ Senhas              │
+        │  ✔ Sem acesso anônimo  │
+        │  ACL  ← próximo passo  │
+        │  TLS  ← depois         │
+        └────────────────────────┘
+
+Até este momento:
+
+✅ Usuários
+✅ Senhas
+✅ allow_anonymous false
+
+Ainda não existe restrição por tópico.
+
+Por exemplo, hoje qualquer usuário autenticado pode fazer:
+
+hidrocontrol_device
+
+publicar em qualquer tópico.
+
+Também pode assinar qualquer tópico.
+
+Isso é exatamente o que vamos corrigir agora.
+    

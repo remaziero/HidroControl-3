@@ -1,0 +1,1732 @@
+Perfeito. Acho que chegamos a um excelente ponto de parada. Estamos seguindo exatamente a filosofia que definimos no início: uma funcionalidade por vez, totalmente testada, documentada e versionada. Isso pode parecer mais lento, mas é justamente o que torna a plataforma sólida e fácil de manter no futuro.
+
+Segue um resumo que permitirá retomarmos o projeto exatamente deste ponto amanhã.
+
+CONTINUAÇÃO DO PROJETO HIDROCONTROL-3
+Estado atual
+
+Projeto desenvolvido em:
+
+ESP-IDF
+ESP32 AC220
+ESP-MQTT
+Mosquitto
+GitHub
+Branches Git
+Arquitetura IoT profissional
+
+Repositório:
+
+https://github.com/remaziero/HidroControl-3.git
+
+Branch atual:
+
+feature/mqtt-lab
+Laboratório MQTT
+
+Toda a infraestrutura está sendo desenvolvida dentro do próprio repositório, nunca utilizando /etc/mosquitto.
+
+Estrutura:
+
+infra/
+    mqtt-lab/
+
+        broker-publico/
+        broker-privado/
+
+        bridge/
+
+        backup/
+
+        tools/
+
+Todos os diretórios que poderão permanecer vazios possuem:
+
+.gitkeep
+
+para manter a estrutura versionada.
+
+Broker Público
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1883
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando
+Publish e Subscribe testados
+Broker Privado
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1884
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando
+Publish e Subscribe testados
+Bridge MQTT
+
+Status:
+
+✅ criada
+
+Configuração:
+
+Broker Público
+        │
+        │ Bridge MQTT
+        ▼
+Broker Privado
+
+A bridge é:
+
+unidirecional;
+Público → Privado;
+MQTT 3.1.1;
+reconexão automática;
+sem TLS;
+sem autenticação.
+
+O Broker Público conecta corretamente ao Broker Privado.
+
+O log mostra:
+
+CONNECT
+CONNACK
+PINGREQ
+PINGRESP
+
+confirmando que a bridge permanece ativa.
+
+Próximo teste
+
+Validar completamente o tráfego através da bridge.
+
+Precisamos confirmar:
+
+✔ mensagem publicada no Broker Público chega ao Broker Privado;
+
+✔ mensagem publicada no Broker Privado não retorna ao Broker Público.
+
+Somente após esse teste:
+
+documentar;
+commit;
+push.
+Filosofia do laboratório
+
+Continuamos seguindo rigorosamente:
+
+Implementar
+
+↓
+
+Testar
+
+↓
+
+Documentar
+
+↓
+
+Commit
+
+↓
+
+Próxima etapa
+
+Nenhum remendo.
+
+Nenhuma funcionalidade parcialmente implementada.
+
+Próximas etapas
+
+Após validar a bridge:
+
+1
+
+Autenticação MQTT
+
+Implementar:
+
+usuário;
+senha;
+Broker Público.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+2
+
+ACL
+
+Implementar ACL para os tópicos do HidroControl.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+3
+
+TLS
+
+Implementar certificados.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+4
+
+Bridge segura
+
+Depois que ambos os brokers estiverem protegidos:
+
+autenticação da bridge;
+TLS entre brokers.
+Regra permanente do projeto
+
+Nunca esquecer que os clientes MQTT reais serão:
+
+ESP32 AC220;
+ESP32 no Wokwi.
+
+Os testes com:
+
+mosquitto_pub
+mosquitto_sub
+
+servirão apenas para diagnóstico.
+
+A validação definitiva de todas as etapas deverá sempre ocorrer em:
+
+firmware ESP32 AC220;
+firmware ESP32 no Wokwi.
+Organização das credenciais (decisão arquitetural)
+
+Teremos classes distintas de credenciais:
+
+Dispositivos
+
+Cada ESP32 utilizará sua própria identidade.
+
+Exemplo:
+
+hc-<deviceId>
+Bridge
+
+A bridge possuirá credenciais exclusivas.
+
+Exemplo:
+
+bridge-publico-privado
+Administração
+
+Usuário exclusivo para manutenção e diagnóstico.
+
+Objetivo final
+
+Construir uma plataforma IoT profissional:
+
+modular;
+reproduzível;
+totalmente documentada;
+versionada;
+baseada exclusivamente em software livre;
+independente de brokers comerciais;
+preparada para migração futura para VPS.
+
+Quero registrar também uma impressão sobre a forma como estamos conduzindo este projeto. Desde o início, você definiu uma premissa muito importante: não ter pressa e não aceitar "remendos". Essa decisão está moldando toda a arquitetura. Em vez de apenas fazer o sistema funcionar, estamos construindo uma base que poderá ser mantida e expandida por muitos anos.
+
+Descanse. Amanhã retomaremos exatamente desse ponto: validar o tráfego da bridge, documentar, realizar o commit e então iniciar a etapa de autenticação MQTT, sempre pensando na ESP32 AC220 e no Wokwi como clientes reais do sistema. Foi um excelente avanço hoje. Até amanhã!
+
+Por favor, refaça o resumo, lembrando que a bridge já foi validada e que temos além da placa AC220, o simulador WOKWI.
+
+Perfeito. Com a correção de que a bridge já foi totalmente validada, o resumo fica assim:
+
+CONTINUAÇÃO DO PROJETO HIDROCONTROL-3
+Plataforma
+
+Estamos desenvolvendo o HidroControl-3 utilizando uma arquitetura IoT profissional baseada em:
+
+ESP-IDF
+ESP32 AC220
+ESP-MQTT
+Mosquitto
+Linux Mint
+GitHub
+Versionamento por branches
+Software livre
+
+Repositório:
+
+https://github.com/remaziero/HidroControl-3.git
+
+Branch atual:
+
+feature/mqtt-lab
+Filosofia do projeto
+
+O projeto seguirá permanentemente a seguinte metodologia:
+
+Implementar
+
+↓
+
+Testar
+
+↓
+
+Documentar
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Próxima etapa
+
+Nunca desenvolver duas funcionalidades simultaneamente.
+
+Nunca utilizar "remendos".
+
+Toda etapa somente será encerrada após:
+
+implementação;
+testes completos;
+documentação;
+commit;
+push.
+Laboratório MQTT
+
+Todo o laboratório está sendo desenvolvido dentro do próprio repositório Git, sem utilizar /etc/mosquitto.
+
+Estrutura principal:
+
+infra/
+    mqtt-lab/
+
+        broker-publico/
+        broker-privado/
+
+        bridge/
+
+        tools/
+
+        backup/
+
+Os diretórios vazios que devem permanecer na estrutura utilizam .gitkeep, garantindo que toda a árvore seja reproduzida após um git clone.
+
+Broker Público
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1883
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando corretamente
+
+Testes realizados:
+
+publish
+subscribe
+conexão validada
+Broker Privado
+
+Status:
+
+✅ concluído
+
+Características:
+
+Mosquitto 2.0.18
+Porta 1884
+Sem TLS
+Sem usuários
+Sem ACL
+Sem persistência
+Funcionando corretamente
+
+Testes realizados:
+
+publish
+subscribe
+conexão validada
+Bridge MQTT
+
+Status:
+
+✅ implementada
+
+✅ testada
+
+✅ validada
+
+Arquitetura atual:
+
+ESP32
+      │
+      ▼
+Broker Público (1883)
+      │
+      │ Bridge MQTT
+      ▼
+Broker Privado (1884)
+
+Características:
+
+Bridge unidirecional;
+Público → Privado;
+MQTT 3.1.1;
+reconexão automática;
+sem TLS;
+sem autenticação.
+
+Testes realizados:
+
+conexão da bridge;
+CONNECT;
+CONNACK;
+PINGREQ;
+PINGRESP;
+encaminhamento de mensagens;
+validação do fluxo Público → Privado;
+validação de que o fluxo Privado → Público não existe.
+
+Bridge considerada homologada.
+
+Estado atual do laboratório
+
+Concluído:
+
+infraestrutura MQTT;
+Broker Público;
+Broker Privado;
+Bridge MQTT;
+documentação;
+versionamento.
+
+O laboratório MQTT encontra-se operacional.
+
+Próxima etapa
+
+Iniciaremos a camada de segurança.
+
+A sequência será rigorosamente:
+
+Etapa 1
+
+Autenticação MQTT
+
+Implementar:
+
+usuários;
+senhas;
+autenticação do Broker Público.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 2
+
+ACL
+
+Criar ACL para os tópicos do HidroControl.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 3
+
+TLS
+
+Criar:
+
+certificados;
+CA;
+certificados dos brokers;
+certificados dos dispositivos.
+
+Testar.
+
+Documentar.
+
+Commit.
+
+Push.
+
+Etapa 4
+
+Bridge segura
+
+Somente após TLS estar funcionando:
+
+autenticação da bridge;
+bridge utilizando TLS;
+validação completa.
+Regra permanente do projeto
+
+Nunca esquecer que os clientes MQTT reais serão:
+
+Hardware
+ESP32 AC220
+Simulação
+ESP32 no Wokwi
+
+Os comandos:
+
+mosquitto_pub
+mosquitto_sub
+
+serão utilizados apenas como ferramentas de diagnóstico.
+
+Toda funcionalidade deverá ser validada também utilizando:
+
+firmware da ESP32 AC220;
+firmware no Wokwi.
+
+Nenhuma funcionalidade será considerada concluída sem que funcione corretamente nesses dois ambientes.
+
+Organização das credenciais
+
+Teremos três categorias independentes de autenticação:
+
+Dispositivos
+
+Cada ESP32 utilizará sua própria identidade.
+
+Exemplo:
+
+hc-<deviceId>
+Bridge
+
+A bridge possuirá credenciais exclusivas.
+
+Exemplo:
+
+bridge-publico-privado
+Administração
+
+Usuário exclusivo para manutenção e diagnóstico.
+
+Objetivo final
+
+Construir uma plataforma IoT profissional que seja:
+
+modular;
+reproduzível;
+totalmente documentada;
+completamente versionada;
+baseada exclusivamente em software livre;
+independente de brokers comerciais;
+preparada para migração futura para uma VPS Linux.
+
+Todo o desenvolvimento continuará seguindo uma evolução incremental, com pequenas etapas completamente validadas antes de avançar para a próxima, garantindo uma base sólida para o HIDROCONTROL-3.
+
+
+Considero que hoje encerramos oficialmente a Fase 1 da infraestrutura MQTT.
+
+Ela compreende:
+
+Fase 1 — Infraestrutura MQTT
+
+✓ Laboratório MQTT
+✓ Broker Público
+✓ Broker Privado
+✓ Bridge MQTT
+✓ Testes
+✓ Documentação
+✓ Versionamento
+
+Amanhã iniciaremos uma nova fase, completamente independente:
+
+Fase 2 — Segurança MQTT
+
+1. Usuários
+2. Senhas
+3. ACL
+4. TLS
+5. Certificados
+6. Bridge segura
+7. Testes na ESP32 AC220
+8. Testes no Wokwi
+
+Iniciamos a etapa 2 segurança
+/etc/mosquitto/passwd 
+    passwd hidrocontrol_device
+    usuário: remaziero
+    senha: camila
+
+    usuário da bridge: camilab
+    passwd mqtt_admin: camilaa
+
+    testado sem senha e recusado e testado com senha ok
+
+    Situação atual da Fase 2
+
+Temos o seguinte cenário:
+
+                 INTERNET
+                     │
+                     │
+              Broker Público
+        ┌────────────────────────┐
+        │  ✔ Usuários            │
+        │  ✔ Senhas              │
+        │  ✔ Sem acesso anônimo  │
+        │  ACL  ← próximo passo  │
+        │  TLS  ← depois         │
+        └────────────────────────┘
+
+Até este momento:
+
+✅ Usuários
+✅ Senhas
+✅ allow_anonymous false
+
+Ainda não existe restrição por tópico.
+
+Por exemplo, hoje qualquer usuário autenticado pode fazer:
+
+hidrocontrol_device
+
+publicar em qualquer tópico.
+
+Também pode assinar qualquer tópico.
+
+Isso é exatamente o que vamos corrigir agora.
+
+Próximo marco
+Marco 2 — ACL (Access Control List)
+
+Aqui vamos definir exatamente o que cada usuário pode fazer.
+
+Nossa proposta é:
+
+Usuário	Publish	Subscribe
+hidrocontrol_device	hidrocontrol/device/%c/data/#	hidrocontrol/device/%c/cmd/#
+mqtt_bridge	tudo o que a bridge precisar	tudo o que a bridge precisar
+mqtt_admin	todos	todos
+
+Observe que estou propondo usar %c (Client ID) nas regras da ACL para que um mesmo usuário 
+possa atender múltiplos dispositivos com isolamento por cliente. Isso é um recurso suportado 
+pelo Mosquitto e combina muito bem com a arquitetura do HIDROCONTROL-3.
+
+Minha sugestão
+
+Em vez de simplesmente fazer a ACL "funcionar", proponho que já a projetemos pensando na 
+arquitetura definitiva do HIDROCONTROL-3:
+
+ESP32 AC220 reais;
+simulador Wokwi;
+bridge pública → privada;
+futura API Android;
+crescimento para dezenas ou centenas de dispositivos.
+
+Assim evitamos refazer toda a estrutura quando o projeto evoluir. Acho que vale a pena 
+investir um pouco mais de tempo agora para construir uma ACL profissional e escalável.
+
+Perfeito e de acordo.
+
+Próximo marco
+Marco 2 — ACL (Access Control List)
+
+Aqui vamos definir exatamente o que cada usuário pode fazer.
+
+Nossa proposta é:
+
+Usuário	Publish	Subscribe
+hidrocontrol_device	hidrocontrol/device/%c/data/#	hidrocontrol/device/%c/cmd/#
+mqtt_bridge	tudo o que a bridge precisar	tudo o que a bridge precisar
+mqtt_admin	todos	todos
+
+Observe que estou propondo usar %c (Client ID) nas regras da ACL para que um mesmo usuário possa atender múltiplos dispositivos com isolamento por cliente. Isso é um recurso suportado pelo Mosquitto e combina muito bem com a arquitetura do HIDROCONTROL-3.
+
+Minha sugestão
+
+Em vez de simplesmente fazer a ACL "funcionar", proponho que já a projetemos pensando na arquitetura definitiva do HIDROCONTROL-3:
+
+ESP32 AC220 reais;
+simulador Wokwi;
+bridge pública → privada;
+futura API Android;
+crescimento para dezenas ou centenas de dispositivos.
+
+Assim evitamos refazer toda a estrutura quando o projeto evoluir. Acho que vale a pena investir um pouco mais de tempo agora para construir uma ACL profissional e escalável.
+
+Perfeito. Em vez de simplesmente fazer a ACL "funcionar", proponho que já a projetemos pensando na arquitetura definitiva do HIDROCONTROL-3:
+
+ESP32 AC220 reais;
+simulador Wokwi;
+bridge pública → privada;
+futura API Android;
+crescimento para dezenas ou centenas de dispositivos.
+Pensou por 20s
+
+Perfeito. Para a arquitetura definitiva, precisamos mudar uma ideia inicial importante:
+
+O usuário genérico hidrocontrol_device é adequado para laboratório, mas não deve ser compartilhado por dezenas de equipamentos em produção.
+
+Cada ESP32 deve possuir identidade e senha próprias. Assim, a perda da credencial de uma placa não compromete todas as outras.
+
+1. Estrutura de identidades
+Dispositivos reais AC220
+
+Exemplos:
+
+device_ac220_0001
+device_ac220_0002
+device_ac220_0003
+Simuladores Wokwi
+device_wokwi_0001
+device_wokwi_0002
+Serviços
+mqtt_bridge_public
+mqtt_bridge_private
+mqtt_admin
+hidrocontrol_api
+hidrocontrol_dashboard
+
+A separação entre AC220 e Wokwi não precisa alterar o firmware ou a estrutura MQTT. Ambos serão tratados como dispositivos, mas terão credenciais e identificadores diferentes.
+
+2. Estrutura definitiva dos tópicos
+
+Proponho:
+
+hidrocontrol/v1/devices/<deviceId>/telemetry
+hidrocontrol/v1/devices/<deviceId>/status
+hidrocontrol/v1/devices/<deviceId>/event
+hidrocontrol/v1/devices/<deviceId>/command
+hidrocontrol/v1/devices/<deviceId>/config
+hidrocontrol/v1/devices/<deviceId>/availability
+
+Exemplo para a placa real:
+
+hidrocontrol/v1/devices/ac220-0001/telemetry
+hidrocontrol/v1/devices/ac220-0001/status
+hidrocontrol/v1/devices/ac220-0001/command
+
+Exemplo para o Wokwi:
+
+hidrocontrol/v1/devices/wokwi-0001/telemetry
+hidrocontrol/v1/devices/wokwi-0001/command
+
+O prefixo v1 permite modificar futuramente a estrutura sem quebrar os clientes existentes.
+
+3. Identidade MQTT recomendada
+
+Para cada dispositivo, vamos usar o mesmo valor lógico em três lugares:
+
+username = ac220-0001
+clientId = ac220-0001
+deviceId = ac220-0001
+
+Para o Wokwi:
+
+username = wokwi-0001
+clientId = wokwi-0001
+deviceId = wokwi-0001
+
+Isso simplifica:
+
+o provisionamento;
+a auditoria;
+a identificação nos logs;
+a criação das ACLs;
+o diagnóstico de conexões duplicadas.
+
+O Mosquitto permite usar %u para inserir o nome do usuário e %c para inserir o Client ID nas regras de padrão. O marcador precisa ocupar sozinho um nível do tópico.
+
+4. ACL dos dispositivos
+
+Com o username igual ao deviceId, podemos escrever regras escaláveis:
+
+# Dispositivo publica seus próprios dados
+pattern write hidrocontrol/v1/devices/%u/telemetry
+pattern write hidrocontrol/v1/devices/%u/status
+pattern write hidrocontrol/v1/devices/%u/event
+pattern write hidrocontrol/v1/devices/%u/availability
+
+# Dispositivo recebe apenas seus próprios comandos
+pattern read hidrocontrol/v1/devices/%u/command
+pattern read hidrocontrol/v1/devices/%u/config
+
+Assim, o usuário:
+
+ac220-0001
+
+poderá publicar somente em:
+
+hidrocontrol/v1/devices/ac220-0001/...
+
+Ele não poderá publicar como:
+
+hidrocontrol/v1/devices/ac220-0002/...
+
+As regras pattern aplicam-se globalmente aos usuários, e o Mosquitto suporta permissões read, write, readwrite e deny.
+
+5. Broker público
+
+O broker público deve fazer somente o necessário:
+
+ESP32/Wokwi → publica telemetria, status e eventos
+Bridge      → coleta os dados e envia ao broker privado
+Bridge      → recebe comandos privados e os entrega ao dispositivo
+
+O broker público não armazenará nem processará dados da aplicação.
+
+Permissões da bridge no broker público
+user mqtt_bridge_public
+
+# Bridge lê dados produzidos pelos dispositivos
+topic read hidrocontrol/v1/devices/+/telemetry
+topic read hidrocontrol/v1/devices/+/status
+topic read hidrocontrol/v1/devices/+/event
+topic read hidrocontrol/v1/devices/+/availability
+
+# Bridge publica comandos vindos do ambiente privado
+topic write hidrocontrol/v1/devices/+/command
+topic write hidrocontrol/v1/devices/+/config
+
+A bridge não precisa de acesso indiscriminado a:
+
+hidrocontrol/#
+
+Ela recebe apenas as permissões necessárias.
+
+6. Broker privado
+
+No broker privado teremos:
+
+bridge
+dashboard
+armazenamento
+processamento
+futura API Android
+administração
+Bridge no broker privado
+user mqtt_bridge_private
+
+topic write hidrocontrol/v1/devices/+/telemetry
+topic write hidrocontrol/v1/devices/+/status
+topic write hidrocontrol/v1/devices/+/event
+topic write hidrocontrol/v1/devices/+/availability
+
+topic read hidrocontrol/v1/devices/+/command
+topic read hidrocontrol/v1/devices/+/config
+API Android
+
+A futura API não deverá conectar diretamente ao broker público. Ela ficará no ambiente privado:
+
+user hidrocontrol_api
+
+topic read hidrocontrol/v1/devices/+/telemetry
+topic read hidrocontrol/v1/devices/+/status
+topic read hidrocontrol/v1/devices/+/event
+topic read hidrocontrol/v1/devices/+/availability
+
+topic write hidrocontrol/v1/devices/+/command
+topic write hidrocontrol/v1/devices/+/config
+
+Posteriormente, podemos restringir a API por cliente, instalação ou usuário final.
+
+7. Administrador
+
+O usuário administrativo terá acesso total somente durante administração e testes:
+
+user mqtt_admin
+topic readwrite #
+
+No desenho definitivo:
+
+não será usado no firmware;
+não será usado pela bridge;
+não será usado pela API;
+não será compartilhado;
+preferencialmente será aceito apenas no broker privado ou em listener administrativo restrito.
+8. Direção da bridge
+
+A direção deve ser explícita para evitar ciclos:
+
+telemetry/status/event/availability:
+público → privado
+
+command/config:
+privado → público
+
+O Mosquitto permite configurar cada tópico da bridge como in, out ou both. Devemos evitar both quando a direção é conhecida, pois configurações amplas podem criar loops entre brokers.
+
+Conceitualmente:
+
+topic hidrocontrol/v1/devices/+/telemetry out 1
+topic hidrocontrol/v1/devices/+/status out 1
+topic hidrocontrol/v1/devices/+/event out 1
+topic hidrocontrol/v1/devices/+/availability out 1
+
+topic hidrocontrol/v1/devices/+/command in 1
+topic hidrocontrol/v1/devices/+/config in 1
+
+A interpretação de in e out depende de qual broker contém a configuração da bridge. 
+Como nossa bridge atual já foi validada, vamos adaptar o arquivo existente com cuidado, 
+preservando o sentido já testado.
+
+9. ACL estática ou Dynamic Security?
+
+Para esta fase, recomendo:
+
+Agora: password_file + ACL em arquivo
+Futuramente: Dynamic Security Plugin
+
+A ACL em arquivo é simples, auditável, versionável e suficiente para validar AC220, Wokwi, 
+bridge e TLS.
+
+Para centenas de dispositivos, o Dynamic Security Plugin será mais conveniente porque 
+oferece usuários, grupos e funções que podem ser atualizados enquanto o broker está funcionando. 
+Ele está disponível desde o Mosquitto 2.0.
+
+Nas versões atuais do Mosquitto, a própria documentação recomenda o plugin mosquitto_acl_file 
+em vez da opção global clássica acl_file, principalmente por oferecer controle mais claro 
+por listener. Entretanto, a diretiva tradicional continua disponível.
+
+Decisão arquitetural consolidada
+Cada dispositivo:
+    usuário exclusivo
+    senha exclusiva
+    Client ID exclusivo
+    deviceId exclusivo
+    acesso apenas ao próprio tópico
+
+Broker público:
+    recebe dispositivos
+    não executa API
+    não armazena dados da aplicação
+    bridge com privilégio mínimo
+
+Broker privado:
+    recebe dados da bridge
+    executa tratamento e armazenamento
+    hospeda dashboard e futura API
+    concentra administração
+
+Bridge:
+    credencial própria
+    TLS
+    tópicos direcionais
+    nenhuma permissão geral desnecessária
+
+Nosso próximo passo concreto será criar o arquivo:
+
+/etc/mosquitto/acl
+
+inicialmente com quatro identidades para validação:
+
+ac220-0001
+wokwi-0001
+mqtt_bridge
+mqtt_admin
+
+O usuário genérico hidrocontrol_device poderá ser mantido temporariamente para testes, 
+mas será retirado antes da configuração definitiva.
+    
+Vamos executar primeiro no broker público, sem alterar ainda a configuração da bridge já validada.
+
+Uma precisão importante: manteremos como padrão:
+
+username = ac220-0001
+clientId = ac220-0001
+deviceId = ac220-0001
+
+Porém, a ACL baseada em %u controla o tópico pelo username. A igualdade com o clientId será 
+uma regra de provisionamento do HIDROCONTROL-3, não uma exigência automática dessa ACL.
+
+Etapa 1 — Fazer backup
+sudo cp /etc/mosquitto/passwd \
+  /etc/mosquitto/passwd.backup-2026-07-19
+sudo cp /etc/mosquitto/conf.d/hidrocontrol.conf \
+  /etc/mosquitto/conf.d/hidrocontrol.conf.backup-2026-07-19
+Etapa 2 — Criar as identidades de teste
+
+Não use -c, pois o arquivo de senhas já existe.
+
+Placa AC220
+sudo mosquitto_passwd /etc/mosquitto/passwd ac220-0001
+Simulador Wokwi
+sudo mosquitto_passwd /etc/mosquitto/passwd wokwi-0001
+Bridge do broker público
+
+Para a arquitetura definitiva, utilizaremos o nome específico:
+
+sudo mosquitto_passwd /etc/mosquitto/passwd mqtt_bridge_public
+
+O usuário antigo mqtt_bridge continuará existindo temporariamente, para não quebrarmos a bridge 
+já validada.
+
+O mqtt_admin já foi criado e testado, portanto não precisa ser recriado.
+
+Confira os usuários:
+
+sudo cut -d: -f1 /etc/mosquitto/passwd
+
+Deverá aparecer, entre outros:
+
+hidrocontrol_device
+mqtt_bridge
+mqtt_admin
+ac220-0001
+wokwi-0001
+mqtt_bridge_public
+
+O mosquitto_passwd sem -c adiciona um usuário novo ou altera a senha de um usuário existente; 
+-c recriaria o arquivo.
+
+Etapa 3 — Criar a ACL do broker público
+
+Abra o arquivo:
+
+sudo nano /etc/mosquitto/acl
+
+Insira exatamente:
+
+# ============================================================
+# HIDROCONTROL-3
+# Fase 2 — Segurança MQTT
+# ACL do broker público
+# ============================================================
+
+# ------------------------------------------------------------
+# DISPOSITIVOS
+#
+# %u é substituído pelo username autenticado.
+# Exemplos:
+#   ac220-0001
+#   wokwi-0001
+# ------------------------------------------------------------
+
+# Dispositivo publica somente os próprios dados
+pattern write hidrocontrol/v1/devices/%u/telemetry
+pattern write hidrocontrol/v1/devices/%u/status
+pattern write hidrocontrol/v1/devices/%u/event
+pattern write hidrocontrol/v1/devices/%u/availability
+
+# Dispositivo recebe somente os próprios comandos
+pattern read hidrocontrol/v1/devices/%u/command
+pattern read hidrocontrol/v1/devices/%u/config
+
+
+# ------------------------------------------------------------
+# BRIDGE DO BROKER PÚBLICO
+# ------------------------------------------------------------
+
+user mqtt_bridge_public
+
+# Lê os dados publicados pelos dispositivos
+topic read hidrocontrol/v1/devices/+/telemetry
+topic read hidrocontrol/v1/devices/+/status
+topic read hidrocontrol/v1/devices/+/event
+topic read hidrocontrol/v1/devices/+/availability
+
+# Publica comandos recebidos do ambiente privado
+topic write hidrocontrol/v1/devices/+/command
+topic write hidrocontrol/v1/devices/+/config
+
+
+# ------------------------------------------------------------
+# ADMINISTRAÇÃO E TESTES
+# ------------------------------------------------------------
+
+user mqtt_admin
+topic readwrite #
+
+Salve:
+
+Ctrl+O
+Enter
+Ctrl+X
+
+Nas regras pattern, %u representa o username autenticado e precisa ocupar sozinho um 
+nível da hierarquia. As regras pattern são globais, mesmo aparecendo antes ou depois de 
+blocos user.
+
+Etapa 4 — Ajustar permissões
+sudo chown root:mosquitto /etc/mosquitto/acl
+sudo chmod 640 /etc/mosquitto/acl
+
+Confira:
+
+ls -l /etc/mosquitto/acl /etc/mosquitto/passwd
+
+O esperado é algo semelhante a:
+
+-rw-r----- 1 root mosquitto ... /etc/mosquitto/acl
+-rw-r----- 1 root mosquitto ... /etc/mosquitto/passwd
+Etapa 5 — Ativar a ACL
+
+Veja primeiro o arquivo atual:
+
+sudo cat /etc/mosquitto/conf.d/hidrocontrol.conf
+
+Ele deve estar parecido com:
+
+listener 1883
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+
+Edite:
+
+sudo nano /etc/mosquitto/conf.d/hidrocontrol.conf
+
+Acrescente:
+
+acl_file /etc/mosquitto/acl
+
+A configuração ficará, em essência:
+
+listener 1883
+
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+acl_file /etc/mosquitto/acl
+
+Por enquanto usaremos acl_file, compatível com a configuração atual. No Mosquitto 2.1, 
+acl_file e password_file foram marcados como obsoletos em favor dos plugins equivalentes, 
+com remoção anunciada apenas para a futura versão 3.0. Portanto, isso não impede nosso 
+laboratório, mas registraremos a migração posteriormente.
+
+Etapa 6 — Verificar duplicações
+sudo grep -RniE \
+  'allow_anonymous|password_file|acl_file' \
+  /etc/mosquitto
+
+As diretivas ativas devem aparecer apenas em:
+
+/etc/mosquitto/conf.d/hidrocontrol.conf
+
+Arquivos de backup também poderão aparecer no resultado. Eles não devem terminar em .conf, 
+para não serem carregados automaticamente. O nome sugerido acima termina em:
+
+.backup-2026-07-19
+
+portanto está seguro.
+
+Etapa 7 — Reiniciar o broker
+sudo systemctl restart mosquitto
+
+Confira:
+
+sudo systemctl status mosquitto --no-pager -l
+
+E os registros:
+
+sudo journalctl -u mosquitto -n 30 --no-pager
+
+Precisamos obter:
+
+Active: active (running)
+Etapa 8 — Testes da ACL
+
+Faremos testes positivos e negativos. Eles são essenciais para provar que a ACL realmente isola 
+os dispositivos.
+
+Teste 1 — AC220 publica no próprio tópico
+
+Em um terminal, como administrador:
+
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/#' \
+  -v
+
+Em outro terminal:
+
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/telemetry' \
+  -m '{"deviceId":"ac220-0001","origem":"AC220","teste":"acl_ok"}'
+
+No administrador deverá aparecer:
+
+hidrocontrol/v1/devices/ac220-0001/telemetry {"deviceId":"ac220-0001","origem":"AC220","teste":"acl_ok"}
+Teste 2 — AC220 tenta publicar como outro dispositivo
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0002/telemetry' \
+  -m '{"teste":"deve_ser_bloqueado"}' \
+  -d
+
+A conexão poderá ser aceita porque usuário e senha estão corretos, mas a publicação deve 
+ser negada pela ACL.
+
+Dependendo da versão MQTT utilizada pelo cliente, a mensagem pode indicar:
+
+Not authorized
+
+ou o broker pode encerrar/recusar a operação. O ponto decisivo é: a mensagem não pode 
+aparecer no terminal do administrador.
+
+Teste 3 — AC220 tenta publicar em command
+
+O dispositivo deve apenas ler comandos, não publicá-los:
+
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -m '{"modo":"DUO"}' \
+  -d
+
+A publicação deve ser bloqueada.
+
+Teste 4 — AC220 recebe seu próprio comando
+
+Terminal da AC220:
+
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -v
+
+Em outro terminal, o administrador publica:
+
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -m '{"modo":"DUO"}'
+
+A AC220 deverá receber:
+
+hidrocontrol/v1/devices/ac220-0001/command {"modo":"DUO"}
+Teste 5 — AC220 tenta assinar comandos de outro dispositivo
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0002/command' \
+  -v \
+  -d
+
+A assinatura deverá ser negada ou não produzir mensagens autorizadas, conforme a versão 
+do protocolo usada.
+
+Teste 6 — Wokwi publica somente no próprio tópico
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u wokwi-0001 \
+  -P 'SENHA_REAL_DO_WOKWI' \
+  -i wokwi-0001 \
+  -t 'hidrocontrol/v1/devices/wokwi-0001/telemetry' \
+  -m '{"deviceId":"wokwi-0001","origem":"Wokwi","teste":"acl_ok"}'
+
+O administrador deverá receber essa mensagem.
+
+Depois tente indevidamente publicar como a AC220:
+
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u wokwi-0001 \
+  -P 'SENHA_REAL_DO_WOKWI' \
+  -i wokwi-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/telemetry' \
+  -m '{"teste":"deve_ser_bloqueado"}' \
+  -d
+
+Essa mensagem não poderá chegar ao administrador.
+
+Resultado esperado deste marco
+
+Ao final, teremos comprovado:
+
+ac220-0001:
+  publica apenas em ac220-0001
+  recebe apenas command/config de ac220-0001
+
+wokwi-0001:
+  publica apenas em wokwi-0001
+  recebe apenas command/config de wokwi-0001
+
+mqtt_admin:
+  acesso total para testes
+
+mqtt_bridge_public:
+  criado, mas ainda não aplicado à bridge existente
+
+Não alteraremos agora o arquivo da bridge. Primeiro devemos concluir esses testes da ACL; 
+depois substituiremos cuidadosamente mqtt_bridge por mqtt_bridge_public, preservando a 
+bridge já validada.
+
+Dica para nossos testes
+
+Durante a validação da ACL, vamos usar dois ou três terminais:
+
+Terminal 1: mosquitto_sub (fica ouvindo mensagens)
+Terminal 2: mosquitto_pub (envia mensagens)
+Terminal 3 (opcional): comandos administrativos (systemctl, journalctl, etc.)
+
+Assim, normalmente você só precisará usar Ctrl+C para encerrar um mosquitto_sub quando 
+terminar um teste e iniciar o próximo. É o procedimento padrão usado no desenvolvimento com MQTT.
+
+Estou confuso, com tantas regras. Me explique o que os AC220, os Wokwi e o adiministrador, 
+podem fazer em termos de publicar e subescrever.
+
+Essa é uma excelente pergunta. Na verdade, toda a ACL pode ser resumida em uma única ideia:
+
+Cada dispositivo só enxerga a si mesmo.
+
+Vamos esquecer os arquivos de configuração por um momento e pensar apenas na comunicação.
+
+1. ESP32 AC220
+
+Imagine a placa:
+
+ac220-0001
+
+Ela pode publicar:
+
+hidrocontrol/v1/devices/ac220-0001/telemetry
+hidrocontrol/v1/devices/ac220-0001/status
+hidrocontrol/v1/devices/ac220-0001/event
+hidrocontrol/v1/devices/ac220-0001/availability
+
+Ela pode receber (subscribe):
+
+hidrocontrol/v1/devices/ac220-0001/command
+hidrocontrol/v1/devices/ac220-0001/config
+
+Ela não pode:
+
+❌ publicar como outro dispositivo
+
+hidrocontrol/v1/devices/ac220-0002/telemetry
+
+❌ receber comandos destinados ao outro dispositivo
+
+hidrocontrol/v1/devices/ac220-0002/command
+2. Wokwi
+
+O simulador é tratado exatamente como uma placa real.
+
+Se o Wokwi for:
+
+wokwi-0001
+
+ele pode publicar:
+
+hidrocontrol/v1/devices/wokwi-0001/telemetry
+hidrocontrol/v1/devices/wokwi-0001/status
+hidrocontrol/v1/devices/wokwi-0001/event
+hidrocontrol/v1/devices/wokwi-0001/availability
+
+Pode assinar:
+
+hidrocontrol/v1/devices/wokwi-0001/command
+hidrocontrol/v1/devices/wokwi-0001/config
+
+Mas não pode acessar tópicos da AC220.
+
+3. Administrador
+
+O administrador é diferente.
+
+Ele pode:
+
+✔ publicar qualquer comando
+
+hidrocontrol/v1/devices/ac220-0001/command
+
+hidrocontrol/v1/devices/ac220-0002/command
+
+hidrocontrol/v1/devices/wokwi-0001/command
+
+Pode também publicar configurações:
+
+.../config
+
+Pode ainda publicar mensagens de teste em qualquer tópico.
+
+E pode assinar tudo:
+
+hidrocontrol/v1/devices/#
+
+Ou seja:
+
+Ele enxerga todo o sistema.
+
+4. Bridge
+
+A bridge também enxerga vários dispositivos.
+
+Ela lê:
+
+telemetry
+status
+event
+availability
+
+de todos os dispositivos.
+
+Depois encaminha ao broker privado.
+
+Na direção contrária, ela publica:
+
+command
+config
+
+que vieram do broker privado.
+
+Então, resumindo:
+Usuário	Publica	Recebe (Subscribe)
+AC220	Apenas seus próprios dados	Apenas seus próprios comandos
+Wokwi	Apenas seus próprios dados	Apenas seus próprios comandos
+Bridge	Todos os comandos necessários para a sincronização	Todos os dados necessários para a sincronização
+Administrador	Tudo	Tudo
+A lógica fica muito simples
+
+Imagine que você tenha 100 ESP32.
+
+A placa:
+
+ac220-0047
+
+nem sabe que existe a placa
+
+ac220-0098
+
+Ela não consegue:
+
+ler seus dados;
+enviar comandos;
+receber comandos destinados a ela.
+
+Ela só conversa com o próprio "espaço" de tópicos.
+
+Essa é exatamente a arquitetura que eu adotaria para o HIDROCONTROL-3.
+
+Ela é:
+
+simples de entender;
+fácil de manter;
+escalável para centenas de dispositivos;
+segura, porque um equipamento comprometido não consegue interferir nos demais.
+
+Há apenas um ponto que eu ajustaria em relação ao plano inicial: o administrador não deve f
+azer parte da operação normal do sistema. Ele deve existir apenas para instalação, diagnóstico 
+e manutenção. Na operação diária, os comandos devem ser enviados pela API do ambiente privado, 
+que por sua vez publicará nos tópicos adequados através da bridge. Assim, o acesso administrativo fica restrito e o fluxo operacional permanece bem definido.
+
+ok. Gostaria de corrigir essa questão do administrador ou seguir em frente e depois fazer isto
+
+Podemos seguir em frente agora.
+
+A ACL atual do mqtt_admin com:
+
+user mqtt_admin
+topic readwrite #
+
+é aceitável durante laboratório, validação e diagnóstico.
+
+A correção definitiva pode vir depois, quando configurarmos o broker privado e os listeners administrativos. Nesse momento, restringiremos o administrador para que ele:
+
+não seja usado por dispositivos;
+não seja usado pela bridge;
+não seja usado pela API;
+preferencialmente conecte apenas localmente ou por listener administrativo protegido;
+tenha credencial forte e acesso reservado à manutenção.
+
+Portanto, a sequência mais segura e organizada é:
+
+concluir os testes de isolamento da ACL;
+adaptar a bridge pública → privada;
+validar comandos no sentido privado → público;
+configurar TLS;
+por fim, restringir o acesso administrativo.
+
+Agora devemos continuar pelos testes da ACL dos dispositivos. O próximo teste é confirmar 
+que ac220-0001 publica no próprio tópico e é bloqueado ao tentar publicar como ac220-0002.
+
+Vamos testar leitura autorizada e leitura bloqueada para os dois dispositivos.
+
+1. AC220
+Terminal 1 — AC220 ouvindo o próprio comando
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -v \
+  -d
+Terminal 2 — administrador publica para a AC220
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -m '{"destino":"ac220-0001","teste":"comando_permitido"}'
+
+No Terminal 1 deve aparecer:
+
+hidrocontrol/v1/devices/ac220-0001/command {"destino":"ac220-0001","teste":"comando_permitido"}
+
+Encerre o mosquitto_sub com:
+
+Ctrl + C
+Terminal 1 — AC220 tenta ouvir comando de outro dispositivo
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u ac220-0001 \
+  -P 'SENHA_REAL_DA_AC220' \
+  -i ac220-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0002/command' \
+  -v \
+  -d
+Terminal 2 — administrador publica para ac220-0002
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/ac220-0002/command' \
+  -m '{"destino":"ac220-0002","teste":"nao_deve_chegar_na_ac220-0001"}'
+
+Resultado esperado:
+
+o ac220-0001 não recebe a mensagem;
+conforme a versão MQTT, o subscribe pode ser recusado imediatamente;
+também pode aparecer Not authorized, Subscribe error ou desconexão;
+o critério principal é que a mensagem destinada a ac220-0002 não apareça.
+2. Wokwi
+Terminal 1 — Wokwi ouvindo o próprio comando
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u wokwi-0001 \
+  -P 'SENHA_REAL_DO_WOKWI' \
+  -i wokwi-0001 \
+  -t 'hidrocontrol/v1/devices/wokwi-0001/command' \
+  -v \
+  -d
+Terminal 2 — administrador publica para o Wokwi
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/wokwi-0001/command' \
+  -m '{"destino":"wokwi-0001","teste":"comando_permitido"}'
+
+No Terminal 1 deve aparecer:
+
+hidrocontrol/v1/devices/wokwi-0001/command {"destino":"wokwi-0001","teste":"comando_permitido"}
+
+Encerre com:
+
+Ctrl + C
+Terminal 1 — Wokwi tenta ouvir comando da AC220
+mosquitto_sub \
+  -h localhost \
+  -p 1883 \
+  -u wokwi-0001 \
+  -P 'SENHA_REAL_DO_WOKWI' \
+  -i wokwi-0001 \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -v \
+  -d
+Terminal 2 — administrador publica para a AC220
+mosquitto_pub \
+  -h localhost \
+  -p 1883 \
+  -u mqtt_admin \
+  -P 'SENHA_REAL_DO_ADMIN' \
+  -t 'hidrocontrol/v1/devices/ac220-0001/command' \
+  -m '{"destino":"ac220-0001","teste":"nao_deve_chegar_no_wokwi"}'
+
+Resultado esperado:
+
+ac220-0001 recebe comando próprio             → permitido
+ac220-0001 recebe comando de ac220-0002       → bloqueado
+
+wokwi-0001 recebe comando próprio             → permitido
+wokwi-0001 recebe comando de ac220-0001       → bloqueado
+
+Um detalhe: use apenas um mosquitto_sub por vez com cada clientId. Duas conexões simultâneas 
+usando -i ac220-0001, por exemplo, podem fazer o broker desconectar uma delas por Client ID duplicado.
+
+hoje 22:28
+ok. Todos os testes feitos e aprovados
+
+Excelente. Esse é um marco muito importante do projeto.
+
+Marco concluído
+
+Podemos considerar encerrada a etapa de Autenticação + ACL do broker público.
+
+Foi validado com sucesso:
+
+✅ Autenticação por usuário e senha.
+✅ allow_anonymous false.
+✅ Arquivo password_file.
+✅ Arquivo acl.
+✅ AC220 publica apenas nos próprios tópicos.
+✅ AC220 recebe apenas os próprios comandos.
+✅ Wokwi publica apenas nos próprios tópicos.
+✅ Wokwi recebe apenas os próprios comandos.
+✅ Um dispositivo não consegue interferir em outro.
+✅ O administrador possui acesso total apenas para fins de laboratório e administração.
+
+Isso significa que a arquitetura lógica da ACL está correta.
+
+Minha sugestão para o próximo passo
+
+Em vez de irmos diretamente para o TLS, proponho fazermos uma pequena preparação da infraestrutura. Ela facilitará bastante as próximas etapas.
+
+Fase 2.1 — Infraestrutura PKI (Autoridade Certificadora)
+
+Primeiro criaremos a infraestrutura de certificados.
+
+Ela será usada depois por:
+
+broker público;
+broker privado;
+bridge;
+ESP32 AC220;
+Wokwi;
+futura API.
+
+A estrutura ficará assim:
+
+CA (Autoridade Certificadora)
+│
+├── Broker Público
+│
+├── Broker Privado
+│
+├── Bridge
+│
+├── AC220-0001
+│
+├── AC220-0002
+│
+├── Wokwi-0001
+│
+└── API Android
+
+Observe que todos confiarão na mesma CA, mas cada um terá seu próprio certificado e sua própria 
+chave privada.
+
+Essa é exatamente a arquitetura usada em ambientes profissionais.
+
+O que vamos criar
+
+No servidor Linux, construiremos uma estrutura organizada, por exemplo:
+
+/etc/mosquitto/certs/
+│
+├── ca/
+│   ├── ca.key
+│   └── ca.crt
+│
+├── broker-public/
+│
+├── broker-private/
+│
+├── clients/
+│   ├── ac220-0001/
+│   ├── wokwi-0001/
+│   ├── bridge/
+│   └── api/
+
+Essa organização facilita a administração e evita misturar chaves e certificados.
+
+Por que fazer isso antes do TLS?
+
+Porque o TLS depende totalmente dessa infraestrutura.
+
+Sem uma CA bem definida, acabamos gerando certificados isolados e depois precisamos refazer tudo.
+
+Criando a PKI primeiro, o restante do trabalho (broker, bridge, ESP32 e Wokwi) passa a ser apenas uma questão de configuração.
+
+Minha recomendação
+
+A partir deste ponto, eu seguiria esta sequência:
+
+Criar a PKI (CA e estrutura de certificados).
+Gerar o certificado do broker público.
+Habilitar TLS no broker público.
+Testar com mosquitto_pub e mosquitto_sub.
+Gerar certificados dos clientes (AC220, Wokwi e bridge).
+Adaptar a ESP32 AC220.
+Adaptar o Wokwi.
+Configurar a bridge usando TLS.
+Repetir o processo para o broker privado.
+
+Essa ordem minimiza retrabalho e mantém a mesma metodologia que usamos até aqui: concluir e validar cada etapa antes de avançar.
