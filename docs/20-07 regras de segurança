@@ -1833,3 +1833,890 @@ git e github atualizados
 Iniciaremos uma etapa muito interessante: a Infraestrutura de Chaves Públicas (PKI). 
 A partir dela, deixaremos de trabalhar apenas com usuários e senhas e passaremos a utilizar 
 certificados digitais, exatamente como fazem sistemas profissionais de IoT.
+
+Até aqui, construímos uma base de segurança sólida:
+
+✅ Bridge MQTT já validada anteriormente.
+✅ Autenticação por usuário e senha concluída.
+✅ allow_anonymous false validado.
+✅ password_file configurado.
+✅ ACL implementada e testada.
+✅ Isolamento completo entre dispositivos (AC220 e Wokwi).
+✅ Arquitetura definitiva de tópicos MQTT definida.
+✅ Identidade individual por dispositivo consolidada.
+✅ Base preparada para TLS.
+Onde estamos na Fase 2
+
+O cronograma agora fica assim:
+
+FASE 2 — Segurança MQTT
+
+✔ 2.1 Autenticação
+✔ 2.2 ACL
+➡ 2.3 PKI (Infraestrutura de Chaves Públicas)
+⬜ 2.4 TLS no broker público
+⬜ 2.5 Clientes TLS (AC220 e Wokwi)
+⬜ 2.6 Bridge TLS
+⬜ 2.7 Broker privado TLS
+A PKI será a fundação de toda a segurança
+
+Até agora protegemos quem pode falar com o broker.
+
+Agora vamos proteger como essa conversa acontece, garantindo:
+
+confidencialidade (criptografia);
+autenticidade (certificados);
+integridade (dados não alterados em trânsito).
+Minha proposta de metodologia
+
+Gostaria de manter exatamente a metodologia que utilizamos até aqui:
+
+Entender o conceito.
+Projetar a arquitetura.
+Implementar.
+Validar.
+Documentar.
+Commit + GitHub.
+
+Essa disciplina foi um dos fatores que tornou a etapa de ACL tão tranquila.
+
+A primeira atividade da PKI
+
+Não vamos gerar certificados imediatamente.
+
+Primeiro, vamos projetar nossa Autoridade Certificadora (CA).
+
+Definiremos:
+
+CA HIDROCONTROL-3
+│
+├── Broker Público
+├── Broker Privado
+├── Bridge
+├── AC220
+├── Wokwi
+└── API Android
+
+Depois criaremos a estrutura de diretórios no Linux (onde o Mosquitto está instalado), e só 
+então começaremos a gerar as chaves e certificados.
+
+Isso nos permitirá entender cada arquivo que será criado e o papel dele no sistema.
+
+Uma observação importante
+
+Há um detalhe que eu gostaria de incorporar ao projeto antes de começarmos a PKI.
+
+Hoje estamos usando:
+
+ac220-0001
+wokwi-0001
+
+como nomes de usuários, clientId e deviceId.
+
+Eu manteria exatamente esse padrão, mas acrescentaria uma convenção para que todos os 
+certificados tenham o mesmo nome lógico.
+
+Por exemplo:
+
+Usuário MQTT:        ac220-0001
+Client ID:           ac220-0001
+Device ID:           ac220-0001
+Certificado TLS:     ac220-0001.crt
+Chave privada:       ac220-0001.key
+
+Isso traz uma enorme vantagem operacional. Quando olharmos um log do broker ou uma pasta de 
+certificados daqui a um ano, será imediatamente claro qual certificado pertence a qual 
+dispositivo, sem necessidade de tabelas de conversão.
+
+Acredito que esse pequeno detalhe deixará a arquitetura do HIDROCONTROL-3 ainda mais consistente 
+e facilitará bastante a administração quando houver dezenas ou centenas de dispositivos.
+
+Vamos iniciar a Etapa 2.3 — PKI, usando a convenção:
+
+username = clientId = deviceId = nome lógico do certificado
+
+Exemplo:
+
+ac220-0001
+├── usuário MQTT: ac220-0001
+├── Client ID: ac220-0001
+├── Device ID: ac220-0001
+├── certificado: ac220-0001.crt
+└── chave privada: ac220-0001.key
+
+Primeiro criaremos somente a estrutura da PKI e verificaremos o OpenSSL. Ainda não modificaremos o Mosquitto nem a porta 1883.
+
+1. Confirmar a versão do OpenSSL
+
+Execute:
+
+openssl version -a
+
+O OpenSSL será responsável por gerar chaves privadas, pedidos de certificado e certificados digitais. O comando openssl req também pode criar o certificado autoassinado da nossa CA.
+
+2. Criar uma área privada para a PKI
+
+Para não misturarmos a chave da CA com os certificados operacionais do Mosquitto, proponho:
+
+/etc/hidrocontrol/pki
+
+Crie a estrutura:
+
+sudo mkdir -p /etc/hidrocontrol/pki/{ca,broker-public,broker-private,clients,bridge,api}
+
+Agora crie as pastas dos primeiros dispositivos:
+
+sudo mkdir -p \
+  /etc/hidrocontrol/pki/clients/ac220-0001 \
+  /etc/hidrocontrol/pki/clients/wokwi-0001
+
+Verifique:
+
+sudo find /etc/hidrocontrol/pki -maxdepth 3 -type d | sort
+
+O resultado deverá ser semelhante a:
+
+/etc/hidrocontrol/pki
+/etc/hidrocontrol/pki/api
+/etc/hidrocontrol/pki/bridge
+/etc/hidrocontrol/pki/broker-private
+/etc/hidrocontrol/pki/broker-public
+/etc/hidrocontrol/pki/ca
+/etc/hidrocontrol/pki/clients
+/etc/hidrocontrol/pki/clients/ac220-0001
+/etc/hidrocontrol/pki/clients/wokwi-0001
+3. Proteger a estrutura
+
+A chave privada da CA será o arquivo mais sensível de toda a infraestrutura. Portanto, inicialmente deixaremos toda a PKI acessível apenas ao root:
+
+sudo chown -R root:root /etc/hidrocontrol/pki
+sudo chmod 700 /etc/hidrocontrol/pki
+sudo find /etc/hidrocontrol/pki -type d -exec chmod 700 {} \;
+
+Verifique:
+
+sudo ls -ld /etc/hidrocontrol/pki
+sudo find /etc/hidrocontrol/pki -maxdepth 2 -type d -printf '%M %u:%g %p\n'
+
+Deverá aparecer:
+
+drwx------ root:root
+
+Posteriormente, copiaremos apenas os certificados necessários ao broker para /etc/mosquitto/certs. A chave privada da CA não será entregue ao Mosquitto, às ESP32, ao Wokwi nem à bridge.
+
+4. Criar um arquivo de identificação da PKI
+
+Esse arquivo não contém segredo. Ele documentará a convenção adotada:
+
+sudo nano /etc/hidrocontrol/pki/README.txt
+
+Conteúdo:
+
+HIDROCONTROL-3 — Infraestrutura de Chaves Públicas
+
+Convenção de identidade dos dispositivos:
+
+username MQTT = clientId MQTT = deviceId = nome lógico do certificado
+
+Exemplos:
+
+AC220:
+  identidade: ac220-0001
+  certificado: ac220-0001.crt
+  chave privada: ac220-0001.key
+
+Wokwi:
+  identidade: wokwi-0001
+  certificado: wokwi-0001.crt
+  chave privada: wokwi-0001.key
+
+Serviços previstos:
+
+  broker-public
+  broker-private
+  mqtt-bridge-public
+  mqtt-bridge-private
+  hidrocontrol-api
+  hidrocontrol-dashboard
+
+Diretriz de segurança:
+
+A chave privada da CA deve permanecer somente na infraestrutura
+administrativa da PKI e nunca deve ser distribuída aos clientes.
+
+Salve com:
+
+Ctrl+O
+Enter
+Ctrl+X
+
+Proteja:
+
+sudo chmod 600 /etc/hidrocontrol/pki/README.txt
+5. Conferir o estado inicial
+sudo find /etc/hidrocontrol/pki \
+  -maxdepth 3 \
+  -printf '%M %u:%g %p\n' | sort
+
+Neste momento, devemos ter apenas diretórios e o README.txt. Nenhuma chave foi gerada ainda.
+
+O que faremos em seguida
+
+O próximo passo será criar:
+
+/etc/hidrocontrol/pki/ca/hidrocontrol-ca.key
+/etc/hidrocontrol/pki/ca/hidrocontrol-ca.crt
+
+A CA será a autoridade que assinará os certificados do broker, da bridge e dos clientes. O Mosquitto recomenda que CA, servidor e clientes tenham dados de identidade distintos nos respectivos certificados, pois certificados com campos de assunto indistinguíveis podem provocar erros difíceis de diagnosticar.
+
+Também começaremos inicialmente com TLS de servidor:
+
+cliente verifica o certificado do broker
++
+usuário/senha continuam autenticando o dispositivo
+
+Depois poderemos evoluir para mTLS, em que o broker também exige certificado do cliente. O Mosquitto permite esses dois modelos por meio de require_certificate false ou true.
+
+ao final do passo 3 para proteger a estrutura, obtvemos os resultados: remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ openssl version -a
+OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)
+built on: Tue Jun  2 19:33:25 2026 UTC
+platform: debian-amd64
+options:  bn(64,64)
+compiler: gcc -fPIC -pthread -m64 -Wa,--noexecstack -Wall -fzero-call-used-regs=used-gpr -DOPENSSL_TLS_SECURITY_LEVEL=2 -Wa,--noexecstack -g -O2 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -ffile-prefix-map=/build/openssl-gza1f8/openssl-3.0.13=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fdebug-prefix-map=/build/openssl-gza1f8/openssl-3.0.13=/usr/src/openssl-3.0.13-0ubuntu3.11 -DOPENSSL_USE_NODELETE -DL_ENDIAN -DOPENSSL_PIC -DOPENSSL_BUILDING_OPENSSL -DNDEBUG -Wdate-time -D_FORTIFY_SOURCE=3
+OPENSSLDIR: "/usr/lib/ssl"
+ENGINESDIR: "/usr/lib/x86_64-linux-gnu/engines-3"
+MODULESDIR: "/usr/lib/x86_64-linux-gnu/ossl-modules"
+Seeding source: os-specific
+CPUINFO: OPENSSL_ia32cap=0xfef83203078bffff:0x208c0529
+remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ sudo mkdir -p /etc/hidrocontrol/pki/{ca,broker-public,broker-private,clients,bridge,api}
+[sudo] senha para remaziero:       
+remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ sudo mkdir -p \
+  /etc/hidrocontrol/pki/clients/ac220-0001 \
+  /etc/hidrocontrol/pki/clients/wokwi-0001
+remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ sudo find /etc/hidrocontrol/pki -maxdepth 3 -type d | sort
+/etc/hidrocontrol/pki
+/etc/hidrocontrol/pki/api
+/etc/hidrocontrol/pki/bridge
+/etc/hidrocontrol/pki/broker-private
+/etc/hidrocontrol/pki/broker-public
+/etc/hidrocontrol/pki/ca
+/etc/hidrocontrol/pki/clients
+/etc/hidrocontrol/pki/clients/ac220-0001
+/etc/hidrocontrol/pki/clients/wokwi-0001
+remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ sudo chown -R root:root /etc/hidrocontrol/pki
+sudo chmod 700 /etc/hidrocontrol/pki
+sudo find /etc/hidrocontrol/pki -type d -exec chmod 700 {} \;
+remaziero@remaziero-VirtualBox:~/Documentos/PlatformIO/Projects/HidroControl-3$ sudo ls -ld /etc/hidrocontrol/pki
+sudo find /etc/hidrocontrol/pki -maxdepth 2 -type d -printf '%M %u:%g %p\n'
+drwx------ 8 root root 4096 jul 20 20:20 /etc/hidrocontrol/pki
+drwx------ root:root /etc/hidrocontrol/pki
+drwx------ root:root /etc/hidrocontrol/pki/clients
+drwx------ root:root /etc/hidrocontrol/pki/clients/ac220-0001
+drwx------ root:root /etc/hidrocontrol/pki/clients/wokwi-0001
+drwx------ root:root /etc/hidrocontrol/pki/broker-public
+drwx------ root:root /etc/hidrocontrol/pki/broker-private
+drwx------ root:root /etc/hidrocontrol/pki/bridge
+drwx------ root:root /etc/hidrocontrol/pki/api
+drwx------ root:root /etc/hidrocontrol/pki/ca
+
+Perfeito, Renato. Eu analisei cuidadosamente toda a saída dos comandos.
+
+Resultado da validação
+
+Tudo está exatamente como deveria estar. ✔️
+
+Vamos analisar cada etapa.
+
+1. OpenSSL
+
+Você possui:
+
+OpenSSL 3.0.13
+
+Excelente.
+
+É uma versão moderna, totalmente compatível com TLS 1.2 e TLS 1.3, e suporta tudo o que precisaremos:
+
+geração de RSA
+geração de ECC (caso futuramente desejemos migrar)
+X509
+CSR
+CA
+TLS 1.3
+
+Não será necessário instalar nada.
+
+2. Estrutura de diretórios
+
+Está perfeita.
+
+Você criou exatamente:
+
+/etc/hidrocontrol/pki
+│
+├── api
+├── bridge
+├── broker-private
+├── broker-public
+├── ca
+└── clients
+      ├── ac220-0001
+      └── wokwi-0001
+
+Essa organização é muito boa.
+
+Ela vai facilitar enormemente quando tivermos dezenas de dispositivos.
+
+3. Permissões
+
+Também estão corretas.
+
+Você obteve:
+
+drwx------ root:root
+
+Ou seja
+
+700
+
+Significa:
+
+Usuário	Permissão
+root	rwx
+grupo	nenhuma
+outros	nenhuma
+
+Perfeito.
+
+Por que isso é importante?
+
+Imagine que daqui alguns meses você tenha:
+
+100 ESP32
+
+20 Wokwi
+
+10 Bridges
+
+2 Brokers
+
+1 API
+
+Todos terão certificados.
+
+Mas somente uma máquina poderá emitir novos certificados.
+
+Essa máquina é onde está a CA.
+
+Se alguém roubar:
+
+hidrocontrol-ca.key
+
+ele consegue criar certificados falsos.
+
+Portanto:
+
+A chave privada da CA é o bem mais precioso da infraestrutura.
+
+Foi exatamente por isso que protegemos tudo com:
+
+chmod 700
+4. Observação arquitetural importante
+
+Gostaria de fazer um pequeno ajuste na arquitetura antes de criarmos a CA.
+
+Eu normalmente utilizo esta organização:
+
+/etc/hidrocontrol/pki
+
+├── ca
+│
+├── issued
+│
+├── csr
+│
+├── private
+│
+├── revoked
+│
+├── broker-public
+│
+├── broker-private
+│
+├── bridge
+│
+├── clients
+│
+└── api
+
+Por quê?
+
+Porque durante a vida do projeto existirão centenas de arquivos.
+
+Exemplo:
+
+ac220-0001.csr
+ac220-0002.csr
+ac220-0105.csr
+
+Esses CSR (Certificate Signing Request) não pertencem ao dispositivo.
+
+Eles pertencem à CA.
+
+Por isso gosto de separá-los.
+
+O mesmo vale para certificados emitidos.
+
+Minha proposta
+
+Antes de gerarmos qualquer certificado, acrescentarmos quatro diretórios:
+
+sudo mkdir -p \
+/etc/hidrocontrol/pki/private \
+/etc/hidrocontrol/pki/csr \
+/etc/hidrocontrol/pki/issued \
+/etc/hidrocontrol/pki/revoked
+
+Depois:
+
+sudo chmod 700 \
+/etc/hidrocontrol/pki/private \
+/etc/hidrocontrol/pki/csr \
+/etc/hidrocontrol/pki/issued \
+/etc/hidrocontrol/pki/revoked
+
+Esses diretórios terão funções específicas:
+
+private
+
+Guardar chaves privadas administrativas.
+
+csr
+
+Guardar pedidos de assinatura.
+
+issued
+
+Guardar certificados emitidos pela CA.
+
+revoked
+
+Guardar certificados revogados.
+
+Por que estou propondo isso?
+
+Porque estamos construindo uma PKI "de verdade".
+
+Mesmo que hoje existam apenas:
+
+ac220-0001
+
+wokwi-0001
+
+amanhã poderão existir:
+
+ac220-0248
+
+que foi substituído,
+
+ou
+
+ac220-0170
+
+que foi roubado,
+
+ou
+
+ac220-0065
+
+que teve o certificado revogado.
+
+Ter essa organização desde o início evita reorganizações futuras.
+
+Situação do projeto
+
+Até aqui, considero a Etapa 2.3.1 — Preparação da Infraestrutura PKI concluída com sucesso:
+
+✅ OpenSSL validado.
+✅ Estrutura principal criada.
+✅ Permissões configuradas corretamente.
+✅ Convenção de identidade mantida (username = clientId = deviceId = certificado).
+
+Estamos prontos para iniciar a próxima etapa: criar a Autoridade Certificadora (CA) do 
+HIDROCONTROL-3, que será a raiz de confiança de toda a infraestrutura de segurança do projeto.
+
+A nova Root CA foi criada corretamente e está tecnicamente válida. Podemos considerar concluída a criação da chave privada e do certificado raiz.
+
+1. Chave privada
+
+A chave foi novamente gerada com:
+
+openssl genpkey \
+  -algorithm RSA \
+  -pkeyopt rsa_keygen_bits:4096 \
+  -out hidrocontrol-root-ca.key
+
+Depois foi protegida:
+
+chmod 600 hidrocontrol-root-ca.key
+
+E validada sem revelar seu conteúdo:
+
+Key is valid
+
+As permissões estão corretas:
+
+-rw------- 1 root root 3272 hidrocontrol-root-ca.key
+
+Isso significa:
+
+proprietário: root;
+leitura e escrita somente para root;
+nenhum acesso para grupo ou outros usuários.
+
+Desta vez, a chave privada não foi exibida. O trecho longo mostrado no certificado é apenas o módulo da chave pública, que pode ser visualizado sem risco.
+
+2. Certificado da Root CA
+
+O certificado foi criado e possui:
+
+-rw-r--r-- 1 root root 2134 hidrocontrol-root-ca.crt
+
+A permissão 644 é apropriada para um certificado público:
+
+root pode ler e alterar;
+demais usuários podem apenas ler;
+ninguém além do proprietário pode modificar.
+
+Não há problema em o certificado .crt ser legível. O segredo está exclusivamente no arquivo .key.
+
+3. Identidade confirmada
+
+O Subject ficou exatamente como planejado:
+
+C = BR
+ST = Distrito Federal
+L = Brasilia
+O = HIDROCONTROL-3
+OU = PKI
+CN = HIDROCONTROL-3 Root CA
+
+O Issuer é idêntico:
+
+Issuer  = HIDROCONTROL-3 Root CA
+Subject = HIDROCONTROL-3 Root CA
+
+Isso está correto porque se trata de um certificado autoassinado. A Autoridade Certificadora assinou o próprio certificado raiz.
+
+4. Versão e algoritmos
+
+O certificado informa:
+
+Version: 3 (0x2)
+
+Isso significa que é um certificado X.509 versão 3, necessário para utilizar extensões como:
+
+Basic Constraints;
+Key Usage;
+Subject Key Identifier;
+Authority Key Identifier.
+
+A assinatura utiliza:
+
+sha256WithRSAEncryption
+
+Portanto:
+
+hash: SHA-256;
+algoritmo de assinatura: RSA;
+chave pública: RSA de 4096 bits.
+
+Também foi confirmado:
+
+Public-Key: (4096 bit)
+Exponent: 65537
+
+O expoente público 65537 é o valor padrão e adequado para RSA.
+
+5. Extensões fundamentais
+
+Esta é a parte mais importante da conferência.
+
+Basic Constraints
+X509v3 Basic Constraints: critical
+    CA:TRUE, pathlen:1
+
+Está correto.
+
+CA:TRUE determina que esse certificado pode atuar como Autoridade Certificadora.
+
+critical obriga os sistemas que validam o certificado a compreender e respeitar essa extensão.
+
+pathlen:1 permite que essa Root CA assine:
+
+diretamente certificados finais; e
+no máximo um nível de CA intermediária.
+
+Para o projeto atual, assinaremos diretamente os certificados do broker, bridge e clientes. O pathlen:1 também mantém disponível uma futura CA intermediária, caso decidamos profissionalizar ainda mais a infraestrutura.
+
+Key Usage
+X509v3 Key Usage: critical
+    Certificate Sign, CRL Sign
+
+Perfeito.
+
+Isso restringe o certificado raiz às funções apropriadas:
+
+Certificate Sign: assinar certificados;
+CRL Sign: assinar listas de certificados revogados.
+
+Não permite que a Root CA seja usada indevidamente como certificado de servidor MQTT ou de cliente.
+
+Subject Key Identifier
+F1:71:56:1B:DB:15:B2:D2:7C:51:52:05:E1:8C:12:EC:AE:CA:89:C7
+
+É o identificador da chave pública da Root CA.
+
+Authority Key Identifier
+
+O mesmo identificador apareceu como:
+
+F1:71:56:1B:DB:15:B2:D2:7C:51:52:05:E1:8C:12:EC:AE:CA:89:C7
+
+Isso é esperado em uma Root CA autoassinada: a chave da autoridade emissora é a própria chave do titular.
+
+6. Validade
+
+O certificado mostra:
+
+notBefore=Jul 21 01:09:30 2026 GMT
+notAfter=Jul 18 01:09:30 2036 GMT
+
+Embora você tenha realizado o comando na noite de 20 de julho de 2026, o OpenSSL exibe as datas em GMT/UTC.
+
+Brasília está três horas atrás do UTC. Assim:
+
+21/07/2026 01:09:30 UTC
+=
+20/07/2026 22:09:30 em Brasília
+
+Portanto, a data inicial está correta.
+
+O certificado permanecerá válido por 3.650 dias, terminando em 18 de julho de 2036.
+
+7. Número de série
+
+Foi gerado:
+
+0BE5B0842542481675BDCD4B2CDB30697E8B613F
+
+É um número de série amplo e único, apropriado para identificar o certificado.
+
+8. Aparente deformação no comando
+
+Na cópia do terminal apareceu esta linha estranha:
+
+-addext "subjectKeyIdentifier=hash"ign,cRLSign" \n:1" \
+
+Visualmente, isso parece uma deformação causada pela colagem ou apresentação do terminal. Contudo, o certificado final prova que os três parâmetros foram efetivamente interpretados:
+
+Basic Constraints: CA:TRUE, pathlen:1
+Key Usage: Certificate Sign, CRL Sign
+Subject Key Identifier
+
+Portanto, não precisamos refazer o certificado por causa dessa linha visualmente truncada.
+
+Conclusão
+
+A situação atual está consolidada:
+
+✔ Chave privada RSA de 4096 bits
+✔ Chave validada
+✔ Chave protegida com permissão 600
+✔ Certificado X.509 versão 3
+✔ Certificado autoassinado
+✔ Identidade correta
+✔ SHA-256 com RSA
+✔ CA:TRUE
+✔ Key Usage adequado
+✔ Validade até julho de 2036
+✔ Nenhuma chave privada exposta nesta nova geração
+
+A HIDROCONTROL-3 Root CA está oficialmente criada e válida.
+
+O próximo passo da sequência será gerar a chave privada do broker público, mas antes disso convém registrar a impressão digital SHA-256 desta Root CA:
+
+openssl x509 \
+  -in hidrocontrol-root-ca.crt \
+  -noout \
+  -fingerprint \
+  -sha256
+
+Essa impressão digital será nosso identificador independente para conferir futuramente se uma cópia do certificado raiz é exatamente a original.
+
+root@remaziero-VirtualBox:/etc/hidrocontrol/pki/ca# openssl x509 \
+  -in hidrocontrol-root-ca.crt \
+  -noout \
+  -fingerprint \
+  -sha256
+sha256 Fingerprint=EB:6B:93:C3:43:51:D8:2C:1C:73:E3:A6:8A:6B:28:42:1E:14:D3:FA:B7:72:5D:3B:D4:1D:E4:ED:7B:7B:99:72
+root@remaziero-VirtualBox:/etc/hidrocontrol/pki/ca# 
+
+Perfeito. A impressão digital SHA-256 da Root CA foi gerada corretamente:
+
+EB:6B:93:C3:43:51:D8:2C:1C:73:E3:A6:8A:6B:28:42:
+1E:14:D3:FA:B7:72:5D:3B:D4:1D:E4:ED:7B:7B:99:72
+
+Esse valor identifica de forma única o certificado:
+
+hidrocontrol-root-ca.crt
+O que registrar
+
+Guarde a impressão digital no arquivo de documentação da PKI, mas não é necessário registrar nenhum conteúdo da chave privada.
+
+Como está como root, pode editar:
+
+nano /etc/hidrocontrol/pki/README.txt
+
+Sugestão de registro:
+
+HIDROCONTROL-3 ROOT CA
+
+Arquivo:
+  /etc/hidrocontrol/pki/ca/hidrocontrol-root-ca.crt
+
+Common Name:
+  HIDROCONTROL-3 Root CA
+
+Algoritmo:
+  RSA 4096 bits / SHA-256
+
+Validade:
+  20/07/2026 22:09:30 BRT
+  até
+  17/07/2036 22:09:30 BRT
+
+SHA-256 Fingerprint:
+  EB:6B:93:C3:43:51:D8:2C:1C:73:E3:A6:8A:6B:28:42:
+  1E:14:D3:FA:B7:72:5D:3B:D4:1D:E4:ED:7B:7B:99:72
+
+Observação: no terminal, o certificado mostrou validade até Jul 18 01:09:30 2036 GMT, que corresponde a 17 de julho de 2036 às 22:09:30 em Brasília.
+
+Verificação independente
+
+Podemos ainda fazer uma validação criptográfica do certificado autoassinado:
+
+openssl verify \
+  -CAfile hidrocontrol-root-ca.crt \
+  hidrocontrol-root-ca.crt
+
+Resultado esperado:
+
+hidrocontrol-root-ca.crt: OK
+
+Se aparecer OK, teremos confirmado:
+
+✔ certificado íntegro
+✔ assinatura válida
+✔ certificado reconhecido como sua própria raiz de confiança
+✔ fingerprint registrado
+
+Depois disso, a etapa Root CA estará completamente consolidada e poderemos iniciar a geração da chave privada do broker público.
+
+confira: root@remaziero-VirtualBox:/etc/hidrocontrol/pki/ca# openssl verify \
+  -CAfile hidrocontrol-root-ca.crt \
+  hidrocontrol-root-ca.crt
+hidrocontrol-root-ca.crt: OK
+
+Perfeito. Esse era o último teste que faltava para encerrarmos a etapa da Root CA.
+
+O resultado:
+
+hidrocontrol-root-ca.crt: OK
+
+significa que o OpenSSL conseguiu:
+
+✔ Ler o certificado.
+✔ Verificar a assinatura digital.
+✔ Confirmar que a assinatura foi feita pela própria chave da Root CA.
+✔ Validar toda a estrutura X.509 do certificado.
+
+Em outras palavras, a sua Autoridade Certificadora está íntegra e funcional.
+
+Situação da Fase 2.3
+
+Podemos considerar oficialmente concluída a primeira parte da PKI.
+
+Infraestrutura
+✔ Estrutura de diretórios criada
+✔ Permissões configuradas
+✔ Organização da PKI definida
+Root CA
+✔ Chave RSA 4096 bits
+✔ SHA-256
+✔ X.509 v3
+✔ CA:TRUE
+✔ Key Usage correto
+✔ Subject Key Identifier
+✔ Authority Key Identifier
+✔ Certificado autoassinado
+✔ Fingerprint registrada
+✔ Certificado validado
+Segurança
+
+Também gostaria de destacar um aprendizado importante desta etapa.
+
+Na primeira tentativa, a chave privada foi exibida por causa do comando:
+
+openssl pkey -check
+
+Você corrigiu isso imediatamente:
+
+openssl pkey -check -noout
+
+Depois regeneramos toda a Root CA.
+
+Esse procedimento foi o correto e demonstra uma postura adequada em relação à segurança: 
+quando há exposição da chave privada de uma CA, mesmo em um ambiente de desenvolvimento, 
+o mais prudente é descartá-la e gerar uma nova.
+
+Agora começa a parte mais interessante
+
+Até aqui criamos a Autoridade Certificadora.
+
+A partir da próxima etapa ela passará a exercer sua função principal: emitir certificados 
+para outras entidades.
+
+A sequência será:
+
+Root CA
+        │
+        ├──────────────► Broker Público
+        │
+        ├──────────────► Broker Privado
+        │
+        ├──────────────► Bridge MQTT
+        │
+        ├──────────────► AC220
+        │
+        ├──────────────► Wokwi
+        │
+        └──────────────► API
+
+Observe que nenhum desses componentes criará certificados por conta própria. Todos dependerão 
+da Root CA para estabelecer uma cadeia de confiança única.
+
+Minha sugestão para a próxima etapa
+
+Em vez de gerar diretamente o certificado do broker, proponho dedicar alguns minutos para 
+definir uma política de emissão de certificados.
+
+Essa política responderá questões como:
+
+Como serão os nomes (Common Name) de cada certificado?
+Quais extensões cada tipo de certificado deverá possuir (servidor, cliente ou bridge)?
+Como organizar os números de série e os arquivos emitidos?
+Como estruturar a emissão para facilitar futuras revogações e expansões?
+
+Investir um pouco de tempo nessa definição agora evitará retrabalho e manterá toda a PKI 
+consistente à medida que o HIDROCONTROL-3 crescer.

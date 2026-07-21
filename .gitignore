@@ -4,3 +4,23 @@
 .vscode/launch.json
 .vscode/ipch
 include/secrets.h
+
+# HIDROCONTROL-3 — PKI e materiais secretos
+*.key
+*.pem
+*.p12
+*.pfx
+*.csr
+*.srl
+
+# Senhas e credenciais
+*.password
+*.passwd
+password_file
+credentials*
+secrets*
+
+# Cópias locais da infraestrutura PKI
+pki/private/
+pki/ca/*.key
+pki/clients/*/*.key
