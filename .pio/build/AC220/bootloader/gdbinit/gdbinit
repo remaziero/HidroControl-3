@@ -1,0 +1,2 @@
+source /home/renato/HidroControl-3/.pio/build/AC220/bootloader/gdbinit/symbols
+source /home/renato/HidroControl-3/.pio/build/AC220/bootloader/gdbinit/connect

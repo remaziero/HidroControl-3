@@ -1,0 +1,2 @@
+source /home/renato/HidroControl-3/.pio/build/WOKWI/bootloader/gdbinit/symbols
+source /home/renato/HidroControl-3/.pio/build/WOKWI/bootloader/gdbinit/connect

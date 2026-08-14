@@ -1,0 +1,43 @@
+# ============================================================
+# HIDROCONTROL-3 — BROKER MQTT PRIVADO
+#
+# Projeto oficial:
+# /home/renato/HidroControl-3
+#
+# FASE 1:
+# Broker privado local, ainda SEM bridge com HiveMQ Cloud.
+# ============================================================
+
+listener 1884 127.0.0.1
+protocol mqtt
+
+# ------------------------------------------------------------
+# AUTENTICACAO
+# ------------------------------------------------------------
+
+allow_anonymous false
+
+password_file /home/renato/HidroControl-3/mqtt/privado/passwd
+
+
+# ------------------------------------------------------------
+# PERSISTENCIA
+# ------------------------------------------------------------
+
+persistence true
+
+persistence_location /home/renato/HidroControl-3/mqtt/privado/persistence/
+
+
+# ------------------------------------------------------------
+# LOG
+# ------------------------------------------------------------
+
+log_dest stdout
+
+log_type error
+log_type warning
+log_type notice
+log_type information
+
+connection_messages true
