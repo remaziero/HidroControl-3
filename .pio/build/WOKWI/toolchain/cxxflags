@@ -3,5 +3,5 @@
 -fno-builtin-memcpy
 -fno-builtin-memset
 -fno-builtin-bzero
-"-specs=/home/renato/HidroControl-3/.pio/build/WOKWI/specs/picolibc.specs"
+"-specs=/home/remaziero/HidroControl-3/.pio/build/WOKWI/specs/picolibc.specs"
 -fno-rtti

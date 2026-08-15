@@ -1,4 +1,4 @@
-set(CMAKE_CXX_COMPILER "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-g++")
+set(CMAKE_CXX_COMPILER "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-g++")
 set(CMAKE_CXX_COMPILER_ARG1 "")
 set(CMAKE_CXX_COMPILER_ID "GNU")
 set(CMAKE_CXX_COMPILER_VERSION "15.2.0")
@@ -24,11 +24,11 @@ set(CMAKE_CXX_SIMULATE_VERSION "")
 
 
 
-set(CMAKE_AR "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ar")
-set(CMAKE_CXX_COMPILER_AR "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ar")
-set(CMAKE_RANLIB "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ranlib")
-set(CMAKE_CXX_COMPILER_RANLIB "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ranlib")
-set(CMAKE_LINKER "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ld")
+set(CMAKE_AR "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ar")
+set(CMAKE_CXX_COMPILER_AR "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ar")
+set(CMAKE_RANLIB "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ranlib")
+set(CMAKE_CXX_COMPILER_RANLIB "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ranlib")
+set(CMAKE_LINKER "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ld")
 set(CMAKE_LINKER_LINK "")
 set(CMAKE_LINKER_LLD "")
 set(CMAKE_CXX_COMPILER_LINKER "NOTFOUND")
@@ -87,9 +87,9 @@ endif()
 
 
 
-set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0/xtensa-esp-elf/esp32;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0/backward;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/include;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/include-fixed;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include")
+set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0/xtensa-esp-elf/esp32;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0/backward;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/include;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/include-fixed;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include")
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "gcc;c;nosys;c;gcc")
-set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/esp32;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib/esp32;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc;/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib")
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0/esp32;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib/esp32;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/15.2.0;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc;/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
 set(CMAKE_CXX_COMPILER_CLANG_RESOURCE_DIR "")
 

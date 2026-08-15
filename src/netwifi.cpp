@@ -99,6 +99,11 @@ void netwifi_init() {
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
+    #ifndef WOKWI_SIM
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    ESP_LOGI(TAG, "WiFi power save desabilitado");
+    #endif
+
     ESP_LOGI(TAG, "WiFi STA configurado para SSID: %s", WIFI_STA_SSID);
 }
 

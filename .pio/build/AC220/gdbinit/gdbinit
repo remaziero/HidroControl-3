@@ -1,2 +1,2 @@
-source /home/renato/HidroControl-3/.pio/build/AC220/gdbinit/symbols
-source /home/renato/HidroControl-3/.pio/build/AC220/gdbinit/connect
+source /home/remaziero/HidroControl-3/.pio/build/AC220/gdbinit/symbols
+source /home/remaziero/HidroControl-3/.pio/build/AC220/gdbinit/connect

@@ -3,4 +3,4 @@
 -fno-builtin-memcpy
 -fno-builtin-memset
 -fno-builtin-bzero
-"-specs=/home/renato/HidroControl-3/.pio/build/AC220/specs/picolibc.specs"
+"-specs=/home/remaziero/HidroControl-3/.pio/build/AC220/specs/picolibc.specs"

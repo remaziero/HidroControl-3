@@ -1,4 +1,4 @@
-# Install script for directory: /home/renato/.platformio/packages/framework-espidf/components/esp_hw_support
+# Install script for directory: /home/remaziero/.platformio/packages/framework-espidf/components/esp_hw_support
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,16 +34,16 @@ endif()
 
 # Set path to fallback-tool for dependency-resolution.
 if(NOT DEFINED CMAKE_OBJDUMP)
-  set(CMAKE_OBJDUMP "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-objdump")
+  set(CMAKE_OBJDUMP "/home/remaziero/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-objdump")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/renato/HidroControl-3/.pio/build/WOKWI/esp-idf/esp_hw_support/port/esp32/cmake_install.cmake")
+  include("/home/remaziero/HidroControl-3/.pio/build/WOKWI/esp-idf/esp_hw_support/port/esp32/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/renato/HidroControl-3/.pio/build/WOKWI/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
+  include("/home/remaziero/HidroControl-3/.pio/build/WOKWI/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
 endif()
 

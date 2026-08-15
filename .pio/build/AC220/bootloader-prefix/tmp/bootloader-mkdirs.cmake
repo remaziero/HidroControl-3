@@ -6,22 +6,22 @@ cmake_minimum_required(VERSION 3.5)
 # If CMAKE_DISABLE_SOURCE_CHANGES is set to true and the source directory is an
 # existing directory in our source tree, calling file(MAKE_DIRECTORY) on it
 # would cause a fatal error, even though it would be a no-op.
-if(NOT EXISTS "/home/renato/.platformio/packages/framework-espidf/components/bootloader/subproject")
-  file(MAKE_DIRECTORY "/home/renato/.platformio/packages/framework-espidf/components/bootloader/subproject")
+if(NOT EXISTS "/home/remaziero/.platformio/packages/framework-espidf/components/bootloader/subproject")
+  file(MAKE_DIRECTORY "/home/remaziero/.platformio/packages/framework-espidf/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader"
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix"
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/tmp"
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp"
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/src"
-  "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/tmp"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/src"
+  "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "/home/renato/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "/home/remaziero/HidroControl-3/.pio/build/AC220/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

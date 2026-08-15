@@ -1,9 +1,9 @@
-set(CMAKE_HOST_SYSTEM "Linux-7.0.0-28-generic")
+set(CMAKE_HOST_SYSTEM "Linux-6.8.0-137-generic")
 set(CMAKE_HOST_SYSTEM_NAME "Linux")
-set(CMAKE_HOST_SYSTEM_VERSION "7.0.0-28-generic")
+set(CMAKE_HOST_SYSTEM_VERSION "6.8.0-137-generic")
 set(CMAKE_HOST_SYSTEM_PROCESSOR "x86_64")
 
-include("/home/renato/HidroControl-3/.pio/build/WOKWI/toolchain/toolchain-esp32.cmake")
+include("/home/remaziero/HidroControl-3/.pio/build/WOKWI/toolchain/toolchain-esp32.cmake")
 
 set(CMAKE_SYSTEM "Generic")
 set(CMAKE_SYSTEM_NAME "Generic")
