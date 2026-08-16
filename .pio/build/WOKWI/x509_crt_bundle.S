@@ -1,4 +1,4 @@
-/* * Data converted from /home/remaziero/HidroControl-3/.pio/build/WOKWI/x509_crt_bundle
+/* * Data converted from /home/renato/HidroControl-3/.pio/build/WOKWI/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)
