@@ -19,11 +19,25 @@
 
 #define MQTT_BROKER_URI \
     "mqtts://3f64e3d334e045448a9277d405a8f0da.s1.eu.hivemq.cloud:8883"
+
+#if defined(DEVICE_AC220_888334)
+
 #define MQTT_USERNAME   "ac220-888334"
+#define MQTT_PASSWORD   "Camila12@"
+
+#elif defined(DEVICE_AC220_306CF0)
+
+#define MQTT_USERNAME   "ac220-306CF0"
 #define MQTT_PASSWORD   "Camila12@"
 
 #else
 
-#error "Ambiente não definido"
+#error "Dispositivo AC220 nao definido"
+
+#endif
+
+#else
+
+#error "Ambiente nao definido"
 
 #endif

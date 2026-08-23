@@ -12,7 +12,7 @@
                 "/home/renato/.platformio/packages/framework-espidf/components/xtensa/esp32/include",
                 "/home/renato/.platformio/packages/framework-espidf/components/xtensa/include",
                 "/home/renato/.platformio/packages/framework-espidf/components/xtensa/deprecated_include",
-                "/home/renato/HidroControl-3/.pio/build/AC220/config",
+                "/home/renato/HidroControl-3/.pio/build/AC220_888334/config",
                 "/home/renato/.platformio/packages/framework-espidf/components/esp_libc/platform_include",
                 "/home/renato/.platformio/packages/framework-espidf/components/freertos/config/include",
                 "/home/renato/.platformio/packages/framework-espidf/components/freertos/config/include/freertos",
@@ -240,7 +240,7 @@
                     "/home/renato/.platformio/packages/framework-espidf/components/xtensa/esp32/include",
                     "/home/renato/.platformio/packages/framework-espidf/components/xtensa/include",
                     "/home/renato/.platformio/packages/framework-espidf/components/xtensa/deprecated_include",
-                    "/home/renato/HidroControl-3/.pio/build/AC220/config",
+                    "/home/renato/HidroControl-3/.pio/build/AC220_888334/config",
                     "/home/renato/.platformio/packages/framework-espidf/components/esp_libc/platform_include",
                     "/home/renato/.platformio/packages/framework-espidf/components/freertos/config/include",
                     "/home/renato/.platformio/packages/framework-espidf/components/freertos/config/include/freertos",
@@ -478,13 +478,14 @@
                 "PLATFORMIO=60119",
                 "ARDUINO_NodeMCU_32S",
                 "HIDROCONTROL_V3",
+                "DEVICE_AC220_888334",
                 ""
             ],
             "cStandard": "gnu23",
             "cppStandard": "gnu++26",
             "compilerPath": "/home/renato/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc",
             "compilerArgs": [
-                "@/home/renato/HidroControl-3/.pio/build/AC220/toolchain/cflags",
+                "@/home/renato/HidroControl-3/.pio/build/AC220_888334/toolchain/cflags",
                 ""
             ]
         }
