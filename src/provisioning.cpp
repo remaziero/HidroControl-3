@@ -271,7 +271,7 @@ void provisioning_start()
     );
 
     httpd_uri_t maintenance_uri = {};
-    maintenance_uri.uri = "/maintenance";
+    maintenance_uri.uri = "/manutencao";
     maintenance_uri.method = HTTP_GET;
     maintenance_uri.handler = maintenance_handler;
 
