@@ -17,6 +17,10 @@ static const char *TAG = "NETWIFI";
 static bool s_connected = false;
 static char s_ip[16] = "0.0.0.0";
 
+static constexpr int WIFI_MAX_ATTEMPTS = 10;
+static int s_wifi_attempt = 0;
+static bool s_connection_failed = false;
+
 #ifndef WOKWI_SIM
 static char s_wifi_ssid[33] = {0};
 static char s_wifi_password[65] = {0};
@@ -30,7 +34,16 @@ static void event_handler(void *arg,
     (void)arg;
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        ESP_LOGI(TAG, "WiFi STA iniciado. Conectando...");
+        s_wifi_attempt = 1;
+        s_connection_failed = false;
+
+        ESP_LOGI(
+            TAG,
+            "Tentativa WiFi %d/%d",
+            s_wifi_attempt,
+            WIFI_MAX_ATTEMPTS
+        );
+
         esp_wifi_connect();
     }
 
@@ -38,8 +51,27 @@ static void event_handler(void *arg,
         s_connected = false;
         strcpy(s_ip, "0.0.0.0");
 
-        ESP_LOGW(TAG, "WiFi desconectado. Tentando reconectar...");
-        esp_wifi_connect();
+        if (s_wifi_attempt < WIFI_MAX_ATTEMPTS) {
+            s_wifi_attempt++;
+
+            ESP_LOGW(
+                TAG,
+                "Conexao WiFi falhou. Tentativa %d/%d",
+                s_wifi_attempt,
+                WIFI_MAX_ATTEMPTS
+            );
+
+            esp_wifi_connect();
+        }
+        else {
+            s_connection_failed = true;
+
+            ESP_LOGE(
+                TAG,
+                "Nao foi possivel conectar ao WiFi apos %d tentativas",
+                WIFI_MAX_ATTEMPTS
+            );
+        }
     }
 
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
@@ -50,6 +82,8 @@ static void event_handler(void *arg,
                  IP2STR(&event->ip_info.ip));
 
         s_connected = true;
+        s_connection_failed = false;
+        s_wifi_attempt = 0;
 
         ESP_LOGI(TAG, "WiFi conectado. IP=%s", s_ip);
     }
@@ -279,6 +313,18 @@ void netwifi_init() {
 
 bool netwifi_is_connected() {
     return s_connected;
+}
+
+bool netwifi_connection_failed() {
+    return s_connection_failed;
+}
+
+int netwifi_attempt() {
+    return s_wifi_attempt;
+}
+
+int netwifi_max_attempts() {
+    return WIFI_MAX_ATTEMPTS;
 }
 
 const char* netwifi_ip() {
