@@ -20,7 +20,12 @@
 #define MQTT_BROKER_URI \
     "mqtts://3f64e3d334e045448a9277d405a8f0da.s1.eu.hivemq.cloud:8883"
 
-#if defined(DEVICE_AC220_888334)
+#if defined(DEVICE_AC220_7DD764)
+
+#define MQTT_USERNAME   "ac220-7DD764"
+#define MQTT_PASSWORD   "Camila12@"
+
+#elif defined(DEVICE_AC220_888334)
 
 #define MQTT_USERNAME   "ac220-888334"
 #define MQTT_PASSWORD   "Camila12@"
