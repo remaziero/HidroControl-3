@@ -1,6 +1,8 @@
 #include "netwifi.h"
 #include "secrets.h"
 #include "wificreds.h"
+#include "deviceid.h"
+#include "provisioning.h"
 
 #include <string.h>
 
@@ -15,8 +17,11 @@ static const char *TAG = "NETWIFI";
 static bool s_connected = false;
 static char s_ip[16] = "0.0.0.0";
 
+#ifndef WOKWI_SIM
 static char s_wifi_ssid[33] = {0};
 static char s_wifi_password[65] = {0};
+static char s_ap_ssid[33] = {0};
+#endif
 
 static void event_handler(void *arg,
                           esp_event_base_t event_base,
@@ -51,12 +56,43 @@ static void event_handler(void *arg,
 }
 
 void netwifi_init() {
-    ESP_LOGI(TAG, "Inicializando WiFi STA...");
+    ESP_LOGI(TAG, "Inicializando WiFi...");
+
+#ifndef WOKWI_SIM
+    snprintf(
+        s_ap_ssid,
+        sizeof(s_ap_ssid),
+        "HIDROCONTROL-%s",
+        deviceid_chip()
+    );
+
+    ESP_LOGI(
+        TAG,
+        "SSID de provisionamento preparado: %s",
+        s_ap_ssid
+    );
+
+    bool has_credentials = wificreds_load(
+        s_wifi_ssid,
+        sizeof(s_wifi_ssid),
+        s_wifi_password,
+        sizeof(s_wifi_password)
+    );
+#endif
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+#ifndef WOKWI_SIM
+    if (has_credentials) {
+        esp_netif_create_default_wifi_sta();
+    }
+    else {
+        esp_netif_create_default_wifi_ap();
+    }
+#else
     esp_netif_create_default_wifi_sta();
+#endif
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -81,58 +117,98 @@ void netwifi_init() {
         )
     );
 
-    wifi_config_t wifi_config = {};
-
 #ifndef WOKWI_SIM
-    if (wificreds_load(
-            s_wifi_ssid,
-            sizeof(s_wifi_ssid),
-            s_wifi_password,
-            sizeof(s_wifi_password))) {
 
+    if (has_credentials) {
         ESP_LOGI(TAG, "Credenciais WiFi carregadas do NVS");
-    }
-    else {
+
+        wifi_config_t wifi_config = {};
+
         strncpy(
+            (char *)wifi_config.sta.ssid,
             s_wifi_ssid,
-            WIFI_STA_SSID,
-            sizeof(s_wifi_ssid) - 1
+            sizeof(wifi_config.sta.ssid) - 1
         );
 
         strncpy(
+            (char *)wifi_config.sta.password,
             s_wifi_password,
-            WIFI_STA_PASS,
-            sizeof(s_wifi_password) - 1
+            sizeof(wifi_config.sta.password) - 1
+        );
+
+        wifi_config.sta.threshold.authmode =
+            WIFI_AUTH_WPA2_PSK;
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_mode(WIFI_MODE_STA)
+        );
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_config(
+                WIFI_IF_STA,
+                &wifi_config
+            )
+        );
+
+        ESP_ERROR_CHECK(esp_wifi_start());
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_ps(WIFI_PS_NONE)
         );
 
         ESP_LOGI(
             TAG,
-            "NVS sem credenciais. Usando configuracao temporaria do firmware"
+            "WiFi STA configurado para SSID: %s",
+            s_wifi_ssid
+        );
+    }
+    else {
+        ESP_LOGW(
+            TAG,
+            "NVS sem credenciais. Iniciando modo de provisionamento"
         );
 
-        if (!wificreds_save(
-                s_wifi_ssid,
-                s_wifi_password)) {
+        wifi_config_t ap_config = {};
 
-            ESP_LOGW(
-                TAG,
-                "Nao foi possivel salvar credenciais WiFi no NVS"
-            );
-        }
+        strncpy(
+            (char *)ap_config.ap.ssid,
+            s_ap_ssid,
+            sizeof(ap_config.ap.ssid) - 1
+        );
+
+        ap_config.ap.ssid_len =
+            strlen(s_ap_ssid);
+
+        ap_config.ap.channel = 1;
+        ap_config.ap.max_connection = 4;
+        ap_config.ap.authmode = WIFI_AUTH_OPEN;
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_mode(WIFI_MODE_AP)
+        );
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_config(
+                WIFI_IF_AP,
+                &ap_config
+            )
+        );
+
+        ESP_ERROR_CHECK(esp_wifi_start());
+
+        ESP_LOGI(
+            TAG,
+            "AP de provisionamento iniciado: %s",
+            s_ap_ssid
+        );
+
+        provisioning_start();
     }
 
-    strncpy(
-        (char *)wifi_config.sta.ssid,
-        s_wifi_ssid,
-        sizeof(wifi_config.sta.ssid) - 1
-    );
-
-    strncpy(
-        (char *)wifi_config.sta.password,
-        s_wifi_password,
-        sizeof(wifi_config.sta.password) - 1
-    );
 #else
+
+    wifi_config_t wifi_config = {};
+
     strncpy(
         (char *)wifi_config.sta.ssid,
         WIFI_STA_SSID,
@@ -144,26 +220,30 @@ void netwifi_init() {
         WIFI_STA_PASS,
         sizeof(wifi_config.sta.password) - 1
     );
-#endif
 
-    //wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_config.sta.threshold.authmode =
+        WIFI_AUTH_OPEN;
 
-    #ifdef WOKWI_SIM
-        wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
-    #else
-        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-    #endif
+    ESP_ERROR_CHECK(
+        esp_wifi_set_mode(WIFI_MODE_STA)
+    );
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(
+        esp_wifi_set_config(
+            WIFI_IF_STA,
+            &wifi_config
+        )
+    );
+
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    #ifndef WOKWI_SIM
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    ESP_LOGI(TAG, "WiFi power save desabilitado");
-    #endif
+    ESP_LOGI(
+        TAG,
+        "WiFi STA configurado para SSID: %s",
+        WIFI_STA_SSID
+    );
 
-    ESP_LOGI(TAG, "WiFi STA configurado para SSID: %s", WIFI_STA_SSID);
+#endif
 }
 
 bool netwifi_is_connected() {

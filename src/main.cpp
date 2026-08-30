@@ -16,6 +16,7 @@
 #include "deviceid.h"
 
 #include "netwifi.h"
+#include "wificreds.h"
 #include "mqttclient.h"
 
 #include "timekeeper.h"
@@ -314,6 +315,7 @@ fluxo_init();
 modos_init();
 deviceid_init();
 oled_init();
+
 netwifi_init();
 
 ESP_LOGI(TAG, "Aguardando WiFi conectar antes de iniciar MQTT...");
