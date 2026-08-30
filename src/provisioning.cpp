@@ -3,6 +3,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "wificreds.h"
+#include "netwifi.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -79,6 +80,59 @@ static esp_err_t root_handler(httpd_req_t *req)
 
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     return httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
+}
+
+
+static esp_err_t maintenance_handler(httpd_req_t *req)
+{
+    const bool connected = netwifi_is_connected();
+    const char *sta_ip = netwifi_ip();
+
+    char html[1800];
+
+    snprintf(
+        html,
+        sizeof(html),
+        "<!DOCTYPE html>"
+        "<html>"
+        "<head>"
+        "<meta charset=\"UTF-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<title>HIDROCONTROL - Manutencao</title>"
+        "<style>"
+        "body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:24px;}"
+        ".box{max-width:420px;margin:40px auto;background:white;padding:24px;"
+        "border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.15);}"
+        "h1{text-align:center;margin-top:0;}"
+        ".status{padding:12px;background:#f0f0f0;border-radius:8px;margin:12px 0;}"
+        "a{display:block;text-align:center;margin-top:22px;padding:12px;"
+        "border-radius:8px;background:#ddd;text-decoration:none;color:#000;}"
+        "</style>"
+        "</head>"
+        "<body>"
+        "<div class=\"box\">"
+        "<h1>HIDROCONTROL</h1>"
+        "<h2>Manutencao local</h2>"
+        "<div class=\"status\"><b>STA:</b> %s</div>"
+        "<div class=\"status\"><b>IP STA:</b> %s</div>"
+        "<a href=\"/\">Configurar rede Wi-Fi</a>"
+        "</div>"
+        "</body>"
+        "</html>",
+        connected ? "Conectado" : "Desconectado",
+        sta_ip
+    );
+
+    httpd_resp_set_type(
+        req,
+        "text/html; charset=utf-8"
+    );
+
+    return httpd_resp_send(
+        req,
+        html,
+        HTTPD_RESP_USE_STRLEN
+    );
 }
 
 
@@ -213,6 +267,18 @@ void provisioning_start()
         httpd_register_uri_handler(
             s_server,
             &root_uri
+        )
+    );
+
+    httpd_uri_t maintenance_uri = {};
+    maintenance_uri.uri = "/maintenance";
+    maintenance_uri.method = HTTP_GET;
+    maintenance_uri.handler = maintenance_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &maintenance_uri
         )
     );
 
