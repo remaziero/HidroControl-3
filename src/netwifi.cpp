@@ -1,5 +1,6 @@
 #include "netwifi.h"
 #include "secrets.h"
+#include "wificreds.h"
 
 #include <string.h>
 
@@ -13,6 +14,9 @@ static const char *TAG = "NETWIFI";
 
 static bool s_connected = false;
 static char s_ip[16] = "0.0.0.0";
+
+static char s_wifi_ssid[33] = {0};
+static char s_wifi_password[65] = {0};
 
 static void event_handler(void *arg,
                           esp_event_base_t event_base,
@@ -79,13 +83,68 @@ void netwifi_init() {
 
     wifi_config_t wifi_config = {};
 
-    strncpy((char *)wifi_config.sta.ssid,
-            WIFI_STA_SSID,
-            sizeof(wifi_config.sta.ssid));
+#ifndef WOKWI_SIM
+    if (wificreds_load(
+            s_wifi_ssid,
+            sizeof(s_wifi_ssid),
+            s_wifi_password,
+            sizeof(s_wifi_password))) {
 
-    strncpy((char *)wifi_config.sta.password,
+        ESP_LOGI(TAG, "Credenciais WiFi carregadas do NVS");
+    }
+    else {
+        strncpy(
+            s_wifi_ssid,
+            WIFI_STA_SSID,
+            sizeof(s_wifi_ssid) - 1
+        );
+
+        strncpy(
+            s_wifi_password,
             WIFI_STA_PASS,
-            sizeof(wifi_config.sta.password));
+            sizeof(s_wifi_password) - 1
+        );
+
+        ESP_LOGI(
+            TAG,
+            "NVS sem credenciais. Usando configuracao temporaria do firmware"
+        );
+
+        if (!wificreds_save(
+                s_wifi_ssid,
+                s_wifi_password)) {
+
+            ESP_LOGW(
+                TAG,
+                "Nao foi possivel salvar credenciais WiFi no NVS"
+            );
+        }
+    }
+
+    strncpy(
+        (char *)wifi_config.sta.ssid,
+        s_wifi_ssid,
+        sizeof(wifi_config.sta.ssid) - 1
+    );
+
+    strncpy(
+        (char *)wifi_config.sta.password,
+        s_wifi_password,
+        sizeof(wifi_config.sta.password) - 1
+    );
+#else
+    strncpy(
+        (char *)wifi_config.sta.ssid,
+        WIFI_STA_SSID,
+        sizeof(wifi_config.sta.ssid) - 1
+    );
+
+    strncpy(
+        (char *)wifi_config.sta.password,
+        WIFI_STA_PASS,
+        sizeof(wifi_config.sta.password) - 1
+    );
+#endif
 
     //wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
