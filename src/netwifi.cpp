@@ -86,6 +86,7 @@ void netwifi_init() {
 #ifndef WOKWI_SIM
     if (has_credentials) {
         esp_netif_create_default_wifi_sta();
+        esp_netif_create_default_wifi_ap();
     }
     else {
         esp_netif_create_default_wifi_ap();
@@ -139,14 +140,36 @@ void netwifi_init() {
         wifi_config.sta.threshold.authmode =
             WIFI_AUTH_WPA2_PSK;
 
+        wifi_config_t ap_config = {};
+
+        strncpy(
+            (char *)ap_config.ap.ssid,
+            s_ap_ssid,
+            sizeof(ap_config.ap.ssid) - 1
+        );
+
+        ap_config.ap.ssid_len =
+            strlen(s_ap_ssid);
+
+        ap_config.ap.channel = 1;
+        ap_config.ap.max_connection = 4;
+        ap_config.ap.authmode = WIFI_AUTH_OPEN;
+
         ESP_ERROR_CHECK(
-            esp_wifi_set_mode(WIFI_MODE_STA)
+            esp_wifi_set_mode(WIFI_MODE_APSTA)
         );
 
         ESP_ERROR_CHECK(
             esp_wifi_set_config(
                 WIFI_IF_STA,
                 &wifi_config
+            )
+        );
+
+        ESP_ERROR_CHECK(
+            esp_wifi_set_config(
+                WIFI_IF_AP,
+                &ap_config
             )
         );
 
@@ -161,6 +184,14 @@ void netwifi_init() {
             "WiFi STA configurado para SSID: %s",
             s_wifi_ssid
         );
+
+        ESP_LOGI(
+            TAG,
+            "AP de manutencao iniciado: %s",
+            s_ap_ssid
+        );
+
+        provisioning_start();
     }
     else {
         ESP_LOGW(
