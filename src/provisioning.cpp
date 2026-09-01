@@ -76,6 +76,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         ".aguardando{background:#fff8e1;color:#795548;border:1px solid #ffe082;}"
         ".sucesso{background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;}"
         ".erro{background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a;}"
+        ".info{background:#e3f2fd;color:#0d47a1;border:1px solid #90caf9;}"
         ".progress{width:100%;height:18px;background:#e0e0e0;border-radius:9px;"
         "overflow:hidden;margin-top:12px;}"
         ".progress-bar{height:100%;width:0%;background:#1565c0;"
@@ -93,6 +94,10 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<div class=\"box\">"
         "<h1>HIDROCONTROL</h1>"
         "<p>Configuracao Wi-Fi</p>"
+        "<div id=\"currentWifi\" class=\"status info\">"
+        "<strong>Estado da conexao Wi-Fi</strong><br>"
+        "Consultando..."
+        "</div>"
         "<div id=\"status\">";
 
     static const char wifi_error[] =
@@ -121,10 +126,12 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<script>"
         "const form=document.getElementById('wifiForm');"
         "const statusBox=document.getElementById('status');"
+        "const currentWifi=document.getElementById('currentWifi');"
         "const saveBtn=document.getElementById('saveBtn');"
         "const scanBtn=document.getElementById('scanBtn');"
         "const networkList=document.getElementById('networkList');"
         "const ssidInput=document.getElementById('ssid');"
+        "const passwordInput=document.getElementById('password');"
         "let ssidAnterior=ssidInput.value;"
         "ssidInput.addEventListener('input',function(){"
         "if(ssidInput.value!==ssidAnterior){"
@@ -133,6 +140,27 @@ static esp_err_t root_handler(httpd_req_t *req)
         "ssidAnterior=ssidInput.value;"
         "}"
         "});"
+
+        "async function carregarEstadoAtual(){"
+        "try{"
+        "const r=await fetch('/wifi-status?ts='+Date.now(),{cache:'no-store'});"
+        "if(!r.ok)throw new Error();"
+        "const d=await r.json();"
+        "const rede=d.ssid&&d.ssid.length?d.ssid:'--';"
+        "const estado=d.connected?'Conectado':'Desconectado';"
+        "const ip=d.ip&&d.ip.length?d.ip:'0.0.0.0';"
+        "currentWifi.innerHTML="
+        "'<strong>Estado da conexao Wi-Fi</strong><br>' +"
+        "'Rede atual: <b>'+rede+'</b><br>' +"
+        "'Estado: <b>'+estado+'</b><br>' +"
+        "'IP: <b>'+ip+'</b>';"
+        "}catch(e){"
+        "currentWifi.innerHTML="
+        "'<strong>Estado da conexao Wi-Fi</strong><br>' +"
+        "'Nao foi possivel consultar o estado atual.';"
+        "}"
+        "}"
+        "carregarEstadoAtual();"
 
         "function sinal(rssi){"
         "if(rssi>=-55)return 'Excelente';"
@@ -233,6 +261,15 @@ static esp_err_t root_handler(httpd_req_t *req)
 
         "form.addEventListener('submit',async function(e){"
         "e.preventDefault();"
+        "if(ssidInput.value.trim()!==''&&passwordInput.value===''){"
+        "statusBox.innerHTML="
+        "'<div class=\"status erro\">"
+        "<strong>Informe a senha da rede Wi-Fi.</strong><br>"
+        "A rede <b>'+ssidInput.value+'</b> foi selecionada, mas a senha esta vazia."
+        "</div>';"
+        "passwordInput.focus();"
+        "return;"
+        "}"
         "saveBtn.disabled=true;"
         "scanBtn.disabled=true;"
         "ssidInput.disabled=true;"
@@ -638,17 +675,26 @@ static esp_err_t wifi_scan_handler(httpd_req_t *req)
 
 static esp_err_t wifi_status_handler(httpd_req_t *req)
 {
-    static char json[128];
+    static char json[256];
+    static wifi_ap_record_t ap_info = {};
+
+    const char *ssid = "";
+
+    if (netwifi_is_connected() &&
+        esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+        ssid = reinterpret_cast<const char *>(ap_info.ssid);
+    }
 
     snprintf(
         json,
         sizeof(json),
-        "{\"connected\":%s,\"failed\":%s,\"attempt\":%d,\"max_attempts\":%d,\"ip\":\"%s\"}",
+        "{\"connected\":%s,\"failed\":%s,\"attempt\":%d,\"max_attempts\":%d,\"ip\":\"%s\",\"ssid\":\"%s\"}",
         netwifi_is_connected() ? "true" : "false",
         netwifi_connection_failed() ? "true" : "false",
         netwifi_attempt(),
         netwifi_max_attempts(),
-        netwifi_ip()
+        netwifi_ip(),
+        ssid
     );
 
     httpd_resp_set_type(req, "application/json");
