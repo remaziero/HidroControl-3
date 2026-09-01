@@ -6,6 +6,7 @@
 #include "netwifi.h"
 #include "deviceid.h"
 #include "esp_system.h"
+#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -105,6 +106,8 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<form id=\"wifiForm\" method=\"POST\" action=\"/save\">"
         "<label for=\"ssid\">Rede Wi-Fi</label>"
         "<input id=\"ssid\" name=\"ssid\" type=\"text\" placeholder=\"Nome da rede\" required>"
+        "<button id=\"scanBtn\" type=\"button\" style=\"margin-top:10px;\">Procurar redes Wi-Fi</button>"
+        "<div id=\"networkList\" style=\"margin-top:10px;\"></div>"
         "<label for=\"password\">Senha</label>"
         "<input id=\"password\" name=\"password\" type=\"password\" placeholder=\"Senha da rede\">"
         "<label style=\"display:flex;align-items:center;gap:8px;margin:10px 0 18px;\">"
@@ -119,6 +122,43 @@ static esp_err_t root_handler(httpd_req_t *req)
         "const form=document.getElementById('wifiForm');"
         "const statusBox=document.getElementById('status');"
         "const saveBtn=document.getElementById('saveBtn');"
+        "const scanBtn=document.getElementById('scanBtn');"
+        "const networkList=document.getElementById('networkList');"
+        "const ssidInput=document.getElementById('ssid');"
+
+        "function sinal(rssi){"
+        "if(rssi>=-55)return 'Excelente';"
+        "if(rssi>=-67)return 'Bom';"
+        "if(rssi>=-75)return 'Regular';"
+        "return 'Fraco';"
+        "}"
+
+        "scanBtn.addEventListener('click',async function(){"
+        "scanBtn.disabled=true;"
+        "networkList.innerHTML='<div style=\"padding:10px 0;\">Procurando redes...</div>';"
+        "try{"
+        "const r=await fetch('/scan?ts='+Date.now(),{cache:'no-store'});"
+        "if(!r.ok)throw new Error();"
+        "const d=await r.json();"
+        "networkList.innerHTML='';"
+        "if(!d.networks||d.networks.length===0){"
+        "networkList.innerHTML='<div style=\"padding:10px 0;\">Nenhuma rede encontrada.</div>';"
+        "}else{"
+        "d.networks.sort((a,b)=>b.rssi-a.rssi);"
+        "d.networks.forEach(n=>{"
+        "const b=document.createElement('button');"
+        "b.type='button';"
+        "b.style.marginTop='6px';"
+        "b.textContent=n.ssid+' ('+sinal(n.rssi)+')';"
+        "b.onclick=function(){ssidInput.value=n.ssid;};"
+        "networkList.appendChild(b);"
+        "});"
+        "}"
+        "}catch(e){"
+        "networkList.innerHTML='<div style=\"padding:10px 0;\">Falha ao procurar redes.</div>';"
+        "}"
+        "scanBtn.disabled=false;"
+        "});"
 
         "function aguardando(){"
         "statusBox.innerHTML="
@@ -473,6 +513,102 @@ static esp_err_t maintenance_handler(httpd_req_t *req)
     );
 }
 
+
+static esp_err_t wifi_scan_handler(httpd_req_t *req)
+{
+    wifi_scan_config_t scan_config = {};
+    scan_config.show_hidden = false;
+
+    ESP_LOGI(TAG, "Iniciando scan de redes Wi-Fi...");
+
+    esp_err_t err = esp_wifi_scan_start(&scan_config, true);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Falha no scan Wi-Fi: %s", esp_err_to_name(err));
+
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        return httpd_resp_sendstr(req, "{\"error\":\"scan_failed\"}");
+    }
+
+    uint16_t count = 0;
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&count));
+
+    if (count > 20) {
+        count = 20;
+    }
+
+    static wifi_ap_record_t records[20] = {};
+
+    if (count > 0) {
+        ESP_ERROR_CHECK(
+            esp_wifi_scan_get_ap_records(&count, records)
+        );
+    }
+
+    static char json[2048];
+    size_t used = 0;
+
+    used += snprintf(
+        json + used,
+        sizeof(json) - used,
+        "{\"networks\":["
+    );
+
+    for (uint16_t i = 0; i < count; i++) {
+        if (records[i].ssid[0] == '\0') {
+            continue;
+        }
+
+        bool duplicate = false;
+
+        for (uint16_t j = 0; j < i; j++) {
+            if (strcmp(
+                    (const char *)records[i].ssid,
+                    (const char *)records[j].ssid
+                ) == 0) {
+                duplicate = true;
+                break;
+            }
+        }
+
+        if (duplicate) {
+            continue;
+        }
+
+        if (used > 20 && json[used - 1] != '[') {
+            used += snprintf(
+                json + used,
+                sizeof(json) - used,
+                ","
+            );
+        }
+
+        used += snprintf(
+            json + used,
+            sizeof(json) - used,
+            "{\"ssid\":\"%s\",\"rssi\":%d}",
+            records[i].ssid,
+            records[i].rssi
+        );
+
+        if (used >= sizeof(json) - 100) {
+            break;
+        }
+    }
+
+    snprintf(
+        json + used,
+        sizeof(json) - used,
+        "]}"
+    );
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+
+    return httpd_resp_sendstr(req, json);
+}
+
 static esp_err_t wifi_status_handler(httpd_req_t *req)
 {
     static char json[128];
@@ -674,6 +810,18 @@ void provisioning_start()
         httpd_register_uri_handler(
             s_server,
             &maintenance_uri
+        )
+    );
+
+    httpd_uri_t scan_uri = {};
+    scan_uri.uri = "/scan";
+    scan_uri.method = HTTP_GET;
+    scan_uri.handler = wifi_scan_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &scan_uri
         )
     );
 

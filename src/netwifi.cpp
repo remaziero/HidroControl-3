@@ -123,6 +123,7 @@ void netwifi_init() {
         esp_netif_create_default_wifi_ap();
     }
     else {
+        esp_netif_create_default_wifi_sta();
         esp_netif_create_default_wifi_ap();
     }
 #else
@@ -249,7 +250,7 @@ void netwifi_init() {
         ap_config.ap.authmode = WIFI_AUTH_OPEN;
 
         ESP_ERROR_CHECK(
-            esp_wifi_set_mode(WIFI_MODE_AP)
+            esp_wifi_set_mode(WIFI_MODE_APSTA)
         );
 
         ESP_ERROR_CHECK(
