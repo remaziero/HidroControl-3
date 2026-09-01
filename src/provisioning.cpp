@@ -152,6 +152,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "b.textContent=n.ssid+' ('+sinal(n.rssi)+')';"
         "b.onclick=function(){"
 "ssidInput.value=n.ssid;"
+"document.getElementById('password').value='';"
 "networkList.innerHTML='';"
 "scanBtn.textContent='Rede selecionada: '+n.ssid;"
 "document.getElementById('password').focus();"
