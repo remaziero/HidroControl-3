@@ -486,6 +486,18 @@ static esp_err_t login_post_handler(httpd_req_t *req)
     return httpd_resp_send(req, nullptr, 0);
 }
 
+static esp_err_t admin_handler(httpd_req_t *req)
+{
+    if (!maintenance_authorized(req)) {
+        httpd_resp_set_status(req, "303 See Other");
+        httpd_resp_set_hdr(req, "Location", "/");
+        return httpd_resp_send(req, nullptr, 0);
+    }
+
+    return root_handler(req);
+}
+
+
 static esp_err_t maintenance_handler(httpd_req_t *req)
 {
     if (!maintenance_authorized(req)) {
@@ -550,7 +562,7 @@ static esp_err_t maintenance_handler(httpd_req_t *req)
         "<div class=\"value\">%s</div>"
         "</div>"
 
-        "<a class=\"button\" href=\"/\">Configurar rede Wi-Fi</a>"
+        "<a class=\"button\" href=\"/admin\">Configurar rede Wi-Fi</a>"
 
         "<div class=\"footer\">"
         "<div>Desenvolvido por Eng. Renato M. Pedrosa</div>"
@@ -841,7 +853,7 @@ void provisioning_start()
     httpd_uri_t root_uri = {};
     root_uri.uri = "/";
     root_uri.method = HTTP_GET;
-    root_uri.handler = root_handler;
+    root_uri.handler = login_handler;
 
     ESP_ERROR_CHECK(
         httpd_register_uri_handler(
@@ -871,6 +883,18 @@ void provisioning_start()
         httpd_register_uri_handler(
             s_server,
             &login_post_uri
+        )
+    );
+
+    httpd_uri_t admin_uri = {};
+    admin_uri.uri = "/admin";
+    admin_uri.method = HTTP_GET;
+    admin_uri.handler = admin_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &admin_uri
         )
     );
 
