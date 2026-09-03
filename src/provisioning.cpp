@@ -1,6 +1,7 @@
 #include "provisioning.h"
 
 #include "esp_http_server.h"
+#include "esp_http_client.h"
 #include "esp_log.h"
 #include "wificreds.h"
 #include "netwifi.h"
@@ -54,6 +55,105 @@ static void url_decode(char *s)
     }
 
     *dst = '\0';
+}
+
+static bool json_escape(
+    const char *src,
+    char *dst,
+    size_t dst_size
+)
+{
+    if (!src || !dst || dst_size == 0) {
+        return false;
+    }
+
+    size_t used = 0;
+
+    while (*src) {
+        unsigned char c =
+            (unsigned char)*src++;
+
+        const char *escape = nullptr;
+
+        switch (c) {
+            case '"':
+                escape = "\\\"";
+                break;
+
+            case '\\':
+                escape = "\\\\";
+                break;
+
+            case '\b':
+                escape = "\\b";
+                break;
+
+            case '\f':
+                escape = "\\f";
+                break;
+
+            case '\n':
+                escape = "\\n";
+                break;
+
+            case '\r':
+                escape = "\\r";
+                break;
+
+            case '\t':
+                escape = "\\t";
+                break;
+
+            default:
+                break;
+        }
+
+        if (escape) {
+            const size_t len =
+                strlen(escape);
+
+            if (used + len >= dst_size) {
+                return false;
+            }
+
+            memcpy(
+                dst + used,
+                escape,
+                len
+            );
+
+            used += len;
+        }
+        else if (c < 0x20) {
+            if (used + 6 >= dst_size) {
+                return false;
+            }
+
+            int n = snprintf(
+                dst + used,
+                dst_size - used,
+                "\\u%04x",
+                c
+            );
+
+            if (n != 6) {
+                return false;
+            }
+
+            used += 6;
+        }
+        else {
+            if (used + 1 >= dst_size) {
+                return false;
+            }
+
+            dst[used++] = (char)c;
+        }
+    }
+
+    dst[used] = '\0';
+
+    return true;
 }
 
 static httpd_handle_t s_server = nullptr;
@@ -122,6 +222,10 @@ static esp_err_t root_handler(httpd_req_t *req)
         "</label>"
         "<button id=\"saveBtn\" type=\"submit\">Salvar configuracao</button>"
         "</form>"
+        "<a id=\"usuarioBtn\" href=\"/usuario\" "
+        "style=\"display:none;margin-top:18px;padding:12px;text-align:center;"
+        "background:#1565c0;color:white;text-decoration:none;border-radius:8px;\">"
+        "Cadastro de usuario</a>"
 
         "<script>"
         "const form=document.getElementById('wifiForm');"
@@ -132,6 +236,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "const networkList=document.getElementById('networkList');"
         "const ssidInput=document.getElementById('ssid');"
         "const passwordInput=document.getElementById('password');"
+        "const usuarioBtn=document.getElementById('usuarioBtn');"
         "let ssidAnterior=ssidInput.value;"
         "ssidInput.addEventListener('input',function(){"
         "if(ssidInput.value!==ssidAnterior){"
@@ -154,6 +259,12 @@ static esp_err_t root_handler(httpd_req_t *req)
         "'Rede atual: <b>'+rede+'</b><br>' +"
         "'Estado: <b>'+estado+'</b><br>' +"
         "'IP: <b>'+ip+'</b>';"
+        "if(d.connected){"
+        "statusBox.innerHTML='';"
+        "usuarioBtn.style.display='block';"
+        "}else{"
+        "usuarioBtn.style.display='none';"
+        "}"
         "}catch(e){"
         "currentWifi.innerHTML="
         "'<strong>Estado da conexao Wi-Fi</strong><br>' +"
@@ -190,6 +301,7 @@ static esp_err_t root_handler(httpd_req_t *req)
 "ssidInput.value=n.ssid;"
 "ssidAnterior=n.ssid;"
 "document.getElementById('password').value='';"
+"statusBox.innerHTML='';"
 "networkList.innerHTML='';"
 "scanBtn.textContent='Rede selecionada: '+n.ssid;"
 "document.getElementById('password').focus();"
@@ -214,6 +326,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "}"
 
         "function sucesso(){"
+        "usuarioBtn.style.display='block';"
         "const rede=ssidInput.value||'rede configurada';"
         "statusBox.innerHTML="
         "'<div class=\"status sucesso\">"
@@ -270,12 +383,12 @@ static esp_err_t root_handler(httpd_req_t *req)
         "passwordInput.focus();"
         "return;"
         "}"
+        "const dados=new URLSearchParams(new FormData(form));"
         "saveBtn.disabled=true;"
         "scanBtn.disabled=true;"
         "ssidInput.disabled=true;"
         "document.getElementById('password').disabled=true;"
         "aguardando();"
-        "const dados=new URLSearchParams(new FormData(form));"
         "try{"
         "const r=await fetch('/save',{"
         "method:'POST',"
@@ -495,6 +608,424 @@ static esp_err_t admin_handler(httpd_req_t *req)
     }
 
     return root_handler(req);
+}
+
+
+static esp_err_t usuario_handler(httpd_req_t *req)
+{
+    if (!maintenance_authorized(req)) {
+        httpd_resp_set_status(req, "303 See Other");
+        httpd_resp_set_hdr(req, "Location", "/");
+        return httpd_resp_send(req, nullptr, 0);
+    }
+
+    static const char html[] =
+        "<!DOCTYPE html>"
+        "<html><head>"
+        "<meta charset=\"UTF-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<title>HIDROCONTROL - Cadastro de usuario</title>"
+        "<style>"
+        "body{font-family:Arial;background:#f4f4f4;margin:0;padding:20px;}"
+        ".box{max-width:420px;margin:40px auto;background:white;padding:22px;"
+        "border-radius:12px;box-shadow:0 2px 10px #bbb;}"
+        "h1{text-align:center;margin-bottom:6px;}"
+        "h2{text-align:center;margin-top:0;}"
+        "label{display:block;margin-top:16px;margin-bottom:6px;font-weight:bold;}"
+        "input[type=text],input[type=password]{width:100%;padding:12px;"
+        "box-sizing:border-box;border:1px solid #bbb;border-radius:8px;font-size:16px;}"
+        ".show{display:flex;align-items:center;gap:8px;margin:10px 0 18px;font-weight:normal;}"
+        ".aviso{background:#fff3cd;border:1px solid #e0b000;padding:12px;"
+        "border-radius:8px;margin:18px 0;line-height:1.4;}"
+        ".status{margin-top:18px;padding:12px;border-radius:8px;line-height:1.4;}"
+        ".sucesso{background:#d4edda;border:1px solid #28a745;color:#155724;}"
+        ".erro{background:#f8d7da;border:1px solid #dc3545;color:#721c24;}"
+        ".aguarde{background:#d9edf7;border:1px solid #31708f;color:#245269;}"
+        "button{width:100%;margin-top:10px;padding:12px;border:0;border-radius:8px;"
+        "font-size:16px;cursor:pointer;background:#1565c0;color:white;}"
+        "button:disabled{opacity:.6;cursor:not-allowed;}"
+        "a{display:block;margin-top:18px;padding:12px;text-align:center;"
+        "background:#666;color:white;text-decoration:none;border-radius:8px;}"
+        "</style>"
+        "</head><body>"
+        "<div class=\"box\">"
+        "<h1>HIDROCONTROL</h1>"
+        "<h2>Cadastro de usuario</h2>"
+
+        "<div class=\"aviso\">"
+        "<strong>ATENCAO</strong><br>"
+        "Conecte-se a rede do dispositivo para cadastrar."
+        "</div>"
+
+        "<form id=\"usuarioForm\">"
+        "<label for=\"username\">Usuario</label>"
+        "<input id=\"username\" name=\"username\" type=\"text\" "
+        "maxlength=\"64\" autocomplete=\"username\" required>"
+
+        "<label for=\"password\">Senha</label>"
+        "<input id=\"password\" name=\"password\" type=\"password\" "
+        "minlength=\"8\" autocomplete=\"new-password\" required>"
+
+        "<label class=\"show\">"
+        "<input id=\"showPassword\" type=\"checkbox\">"
+        "<span>Visualizar senha</span>"
+        "</label>"
+
+        "<button id=\"cadastrarBtn\" type=\"submit\">Cadastrar</button>"
+        "</form>"
+
+        "<div id=\"status\"></div>"
+
+        "<a href=\"/admin\">Voltar</a>"
+        "</div>"
+
+        "<script>"
+        "const form=document.getElementById('usuarioForm');"
+        "const username=document.getElementById('username');"
+        "const password=document.getElementById('password');"
+        "const showPassword=document.getElementById('showPassword');"
+        "const cadastrarBtn=document.getElementById('cadastrarBtn');"
+        "const statusBox=document.getElementById('status');"
+
+        "showPassword.addEventListener('change',function(){"
+        "password.type=this.checked?'text':'password';"
+        "});"
+
+        "form.addEventListener('submit',async function(e){"
+        "e.preventDefault();"
+
+        "if(password.value.length<8){"
+        "statusBox.innerHTML="
+        "'<div class=\"status erro\"><strong>Senha invalida.</strong><br>' +"
+        "'A senha deve possuir pelo menos 8 caracteres.</div>';"
+        "password.focus();"
+        "return;"
+        "}"
+
+        "cadastrarBtn.disabled=true;"
+        "username.disabled=true;"
+        "password.disabled=true;"
+        "showPassword.disabled=true;"
+
+        "statusBox.innerHTML="
+        "'<div class=\"status aguarde\"><strong>Aguarde.</strong><br>' +"
+        "'Cadastrando usuario...</div>';"
+
+        "const controller=new AbortController();"
+        "const timeout=setTimeout(function(){controller.abort();},15000);"
+
+        "try{"
+        "const r=await fetch('/usuario-cadastrar',{"
+        "method:'POST',"
+        "headers:{'Content-Type':'application/x-www-form-urlencoded'},"
+        "body:new URLSearchParams({"
+        "username:username.value,"
+        "password:password.value"
+        "}).toString(),"
+        "signal:controller.signal"
+        "});"
+
+        "clearTimeout(timeout);"
+
+        "if(!r.ok)throw new Error();"
+
+        "const d=await r.json();"
+        "if(d.success!==true)throw new Error();"
+
+        "statusBox.innerHTML="
+        "'<div class=\"status sucesso\">"
+        "<strong>SUCESSO</strong><br>"
+        "Usuario e Senha cadastrados."
+        "</div>';"
+
+        "form.reset();"
+        "password.type='password';"
+
+        "}catch(e){"
+        "clearTimeout(timeout);"
+        "statusBox.innerHTML="
+        "'<div class=\"status erro\">"
+        "<strong>INSUCESSO - tente de novo.</strong><br>"
+        "Confirme se esta conectado na rede do dispositivo!"
+        "</div>';"
+        "}"
+
+        "cadastrarBtn.disabled=false;"
+        "username.disabled=false;"
+        "password.disabled=false;"
+        "showPassword.disabled=false;"
+        "});"
+        "</script>"
+
+        "</body></html>";
+
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    return httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
+}
+
+
+static esp_err_t usuario_cadastrar_handler(httpd_req_t *req)
+{
+    if (!maintenance_authorized(req)) {
+        httpd_resp_set_status(req, "403 Forbidden");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    if (!netwifi_is_connected()) {
+        httpd_resp_set_status(req, "503 Service Unavailable");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    static char body[512];
+
+    if (req->content_len <= 0 ||
+        req->content_len >= (int)sizeof(body)) {
+
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    int received =
+        httpd_req_recv(
+            req,
+            body,
+            req->content_len
+        );
+
+    if (received <= 0) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    body[received] = '\0';
+
+    char username[65] = {0};
+    char password[129] = {0};
+
+    if (
+        httpd_query_key_value(
+            body,
+            "username",
+            username,
+            sizeof(username)
+        ) != ESP_OK ||
+        username[0] == '\0'
+    ) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    if (
+        httpd_query_key_value(
+            body,
+            "password",
+            password,
+            sizeof(password)
+        ) != ESP_OK ||
+        password[0] == '\0'
+    ) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    url_decode(username);
+    url_decode(password);
+
+    if (strlen(password) < 8) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    const char *device_id =
+        deviceid_get();
+
+    static char username_json[400];
+    static char password_json[800];
+    static char device_json[160];
+    static char payload[1536];
+
+    if (
+        !json_escape(
+            username,
+            username_json,
+            sizeof(username_json)
+        ) ||
+        !json_escape(
+            password,
+            password_json,
+            sizeof(password_json)
+        ) ||
+        !json_escape(
+            device_id,
+            device_json,
+            sizeof(device_json)
+        )
+    ) {
+        httpd_resp_set_status(
+            req,
+            "400 Bad Request"
+        );
+
+        httpd_resp_set_type(
+            req,
+            "application/json"
+        );
+
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    int payload_len = snprintf(
+        payload,
+        sizeof(payload),
+        "{\"username\":\"%s\","
+        "\"password\":\"%s\","
+        "\"device_id\":\"%s\"}",
+        username_json,
+        password_json,
+        device_json
+    );
+
+    if (
+        payload_len <= 0 ||
+        payload_len >= (int)sizeof(payload)
+    ) {
+        httpd_resp_set_status(
+            req,
+            "400 Bad Request"
+        );
+
+        httpd_resp_set_type(
+            req,
+            "application/json"
+        );
+
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    esp_http_client_config_t config = {};
+    config.url =
+        "http://192.168.15.12:3000/api/device/register-user";
+    config.method = HTTP_METHOD_POST;
+    config.timeout_ms = 10000;
+
+    esp_http_client_handle_t client =
+        esp_http_client_init(&config);
+
+    if (!client) {
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        httpd_resp_set_type(req, "application/json");
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":false}"
+        );
+    }
+
+    esp_http_client_set_header(
+        client,
+        "Content-Type",
+        "application/json"
+    );
+
+    esp_http_client_set_post_field(
+        client,
+        payload,
+        payload_len
+    );
+
+    ESP_LOGI(
+        TAG,
+        "Cadastrando usuario %s para %s",
+        username,
+        device_id
+    );
+
+    esp_err_t err =
+        esp_http_client_perform(client);
+
+    int status_code = -1;
+
+    if (err == ESP_OK) {
+        status_code =
+            esp_http_client_get_status_code(client);
+    }
+
+    esp_http_client_cleanup(client);
+
+    if (
+        err == ESP_OK &&
+        status_code == 201
+    ) {
+        ESP_LOGI(
+            TAG,
+            "Usuario cadastrado com sucesso"
+        );
+
+        httpd_resp_set_type(
+            req,
+            "application/json"
+        );
+
+        return httpd_resp_sendstr(
+            req,
+            "{\"success\":true}"
+        );
+    }
+
+    ESP_LOGW(
+        TAG,
+        "Falha no cadastro: err=%s HTTP=%d",
+        esp_err_to_name(err),
+        status_code
+    );
+
+    httpd_resp_set_status(
+        req,
+        "502 Bad Gateway"
+    );
+
+    httpd_resp_set_type(
+        req,
+        "application/json"
+    );
+
+    return httpd_resp_sendstr(
+        req,
+        "{\"success\":false}"
+    );
 }
 
 
@@ -837,6 +1368,7 @@ void provisioning_start()
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.max_uri_handlers = 10;
 
     esp_err_t err = httpd_start(&s_server, &config);
 
@@ -895,6 +1427,30 @@ void provisioning_start()
         httpd_register_uri_handler(
             s_server,
             &admin_uri
+        )
+    );
+
+    httpd_uri_t usuario_uri = {};
+    usuario_uri.uri = "/usuario";
+    usuario_uri.method = HTTP_GET;
+    usuario_uri.handler = usuario_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &usuario_uri
+        )
+    );
+
+    httpd_uri_t usuario_cadastrar_uri = {};
+    usuario_cadastrar_uri.uri = "/usuario-cadastrar";
+    usuario_cadastrar_uri.method = HTTP_POST;
+    usuario_cadastrar_uri.handler = usuario_cadastrar_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &usuario_cadastrar_uri
         )
     );
 
