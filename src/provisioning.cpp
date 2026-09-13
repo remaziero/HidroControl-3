@@ -10,7 +10,8 @@
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
+#include "esp_random.h"
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -158,6 +159,40 @@ static bool json_escape(
 
 static httpd_handle_t s_server = nullptr;
 
+// Insere o identificador sem copiar a pagina para um buffer maior.
+static esp_err_t send_device_heading_chunks(httpd_req_t *req, const char *html)
+{
+    const char *heading = strstr(html, "</h1>");
+    if (!heading) {
+        return httpd_resp_send_chunk(req, html, HTTPD_RESP_USE_STRLEN);
+    }
+
+    const char *remaining = heading + strlen("</h1>");
+    esp_err_t err = httpd_resp_send_chunk(req, html, remaining - html);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = httpd_resp_send_chunk(req,
+        "<div style=\"text-align:center;color:#607d8b;font-size:16px;"
+        "font-weight:bold;margin:8px 0 16px;\">", HTTPD_RESP_USE_STRLEN);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    // deviceid_get() contem apenas o prefixo fixo e digitos hexadecimais do MAC.
+    err = httpd_resp_send_chunk(req, deviceid_get(), HTTPD_RESP_USE_STRLEN);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = httpd_resp_send_chunk(req, "</div>", HTTPD_RESP_USE_STRLEN);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return httpd_resp_send_chunk(req, remaining, HTTPD_RESP_USE_STRLEN);
+}
+
 static esp_err_t root_handler(httpd_req_t *req)
 {
     static const char html_before[] =
@@ -222,6 +257,12 @@ static esp_err_t root_handler(httpd_req_t *req)
         "</label>"
         "<button id=\"saveBtn\" type=\"submit\">Salvar configuracao</button>"
         "</form>"
+        "<form method=\"POST\" action=\"/logout\">"
+        "<button type=\"submit\" style=\"background:#666;color:white;\">"
+        "Sair"
+        "</button>"
+        "</form>"
+
         "<a id=\"usuarioBtn\" href=\"/usuario\" "
         "style=\"display:none;margin-top:18px;padding:12px;text-align:center;"
         "background:#1565c0;color:white;text-decoration:none;border-radius:8px;\">"
@@ -415,11 +456,7 @@ static esp_err_t root_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
 
-    esp_err_t err = httpd_resp_send_chunk(
-        req,
-        html_before,
-        HTTPD_RESP_USE_STRLEN
-    );
+    esp_err_t err = send_device_heading_chunks(req, html_before);
 
     if (err != ESP_OK) {
         return err;
@@ -450,26 +487,59 @@ static esp_err_t root_handler(httpd_req_t *req)
     return httpd_resp_send_chunk(req, nullptr, 0);
 }
 
-static bool maintenance_authorized(httpd_req_t *req)
+static char s_maintenance_sessions[8][33] = {};
+
+static int maintenance_session_index(httpd_req_t *req)
 {
-    size_t len = httpd_req_get_hdr_value_len(req, "Cookie");
+    const size_t len =
+        httpd_req_get_hdr_value_len(req, "Cookie");
 
     if (len == 0 || len >= 128) {
-        return false;
+        return -1;
     }
 
-    char cookie[128] = {0};
+    char cookie[128] = {};
 
     if (httpd_req_get_hdr_value_str(
-            req,
-            "Cookie",
-            cookie,
-            sizeof(cookie)
+            req, "Cookie", cookie, sizeof(cookie)
         ) != ESP_OK) {
-        return false;
+        return -1;
     }
 
-    return strstr(cookie, "HCSESSION=autorizado") != nullptr;
+    char *context = nullptr;
+
+    for (char *part = strtok_r(cookie, ";", &context);
+         part != nullptr;
+         part = strtok_r(nullptr, ";", &context)) {
+
+        while (*part == ' ' || *part == '\t') {
+            ++part;
+        }
+
+        if (strncmp(part, "HCSESSION=", 10) != 0) {
+            continue;
+        }
+
+        const char *token = part + 10;
+
+        if (strlen(token) != 32) {
+            return -1;
+        }
+
+        for (int i = 0; i < 8; ++i) {
+            if (s_maintenance_sessions[i][0] != '\0' &&
+                strcmp(token, s_maintenance_sessions[i]) == 0) {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
+static bool maintenance_authorized(httpd_req_t *req)
+{
+    return maintenance_session_index(req) >= 0;
 }
 
 static esp_err_t login_handler(httpd_req_t *req)
@@ -587,17 +657,87 @@ static esp_err_t login_post_handler(httpd_req_t *req)
         );
     }
 
-    httpd_resp_set_hdr(
-        req,
-        "Set-Cookie",
-        "HCSESSION=autorizado; Path=/; HttpOnly; SameSite=Strict"
+    int slot = maintenance_session_index(req);
+
+    if (slot < 0) {
+        for (int i = 0; i < 8; ++i) {
+            if (s_maintenance_sessions[i][0] == '\0') {
+                slot = i;
+                break;
+            }
+        }
+    }
+
+    if (slot < 0) {
+        httpd_resp_set_status(req, "503 Service Unavailable");
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        return httpd_resp_sendstr(
+            req,
+            "Limite de sessoes locais atingido. "
+            "Saia de uma sessao aberta e tente novamente."
+        );
+    }
+
+    unsigned char random_bytes[16];
+    esp_fill_random(random_bytes, sizeof(random_bytes));
+
+    char token[33] = {};
+
+    for (int i = 0; i < 16; ++i) {
+        snprintf(
+            token + i * 2,
+            sizeof(token) - i * 2,
+            "%02x",
+            (unsigned int)random_bytes[i]
+        );
+    }
+
+    char session_cookie[128];
+
+    snprintf(
+        session_cookie,
+        sizeof(session_cookie),
+        "HCSESSION=%s; Path=/; HttpOnly; SameSite=Strict",
+        token
     );
+
+    memcpy(s_maintenance_sessions[slot], token, sizeof(token));
+
+    httpd_resp_set_hdr(req, "Set-Cookie", session_cookie);
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
 
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/manutencao");
 
     return httpd_resp_send(req, nullptr, 0);
 }
+
+static esp_err_t logout_handler(httpd_req_t *req)
+{
+    const int slot = maintenance_session_index(req);
+
+    if (slot >= 0) {
+        memset(
+            s_maintenance_sessions[slot],
+            0,
+            sizeof(s_maintenance_sessions[slot])
+        );
+    }
+
+    httpd_resp_set_hdr(
+        req,
+        "Set-Cookie",
+        "HCSESSION=; Path=/; Max-Age=0; "
+        "HttpOnly; SameSite=Strict"
+    );
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    httpd_resp_set_status(req, "303 See Other");
+    httpd_resp_set_hdr(req, "Location", "/login");
+
+    return httpd_resp_send(req, nullptr, 0);
+}
+
 
 static esp_err_t admin_handler(httpd_req_t *req)
 {
@@ -760,7 +900,12 @@ static esp_err_t usuario_handler(httpd_req_t *req)
         "</body></html>";
 
     httpd_resp_set_type(req, "text/html; charset=utf-8");
-    return httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    esp_err_t err = send_device_heading_chunks(req, html);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return httpd_resp_send_chunk(req, nullptr, 0);
 }
 
 
@@ -1041,9 +1186,10 @@ static esp_err_t maintenance_handler(httpd_req_t *req)
     const char *sta_ip = netwifi_ip();
     const char *device_id = deviceid_get();
 
+    // Mantem o tamanho do buffer da versao anterior.
     static char html[3000];
 
-    snprintf(
+    const int html_len = snprintf(
         html,
         sizeof(html),
         "<!DOCTYPE html>"
@@ -1094,6 +1240,11 @@ static esp_err_t maintenance_handler(httpd_req_t *req)
         "</div>"
 
         "<a class=\"button\" href=\"/admin\">Configurar rede Wi-Fi</a>"
+        "<form method=\"POST\" action=\"/logout\">"
+        "<button class=\"button\" type=\"submit\" "
+        "style=\"width:100%%;border:0;cursor:pointer;background:#666;\">"
+        "Sair</button>"
+        "</form>"
 
         "<div class=\"footer\">"
         "<div>Desenvolvido por Eng. Renato M. Pedrosa</div>"
@@ -1108,6 +1259,14 @@ static esp_err_t maintenance_handler(httpd_req_t *req)
         sta_ip
     );
 
+    if (html_len < 0 || html_len >= (int)sizeof(html)) {
+        return httpd_resp_send_err(
+            req, HTTPD_500_INTERNAL_SERVER_ERROR,
+            "Falha ao gerar pagina de manutencao"
+        );
+    }
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
     httpd_resp_set_type(
         req,
         "text/html; charset=utf-8"
@@ -1253,6 +1412,13 @@ static esp_err_t wifi_status_handler(httpd_req_t *req)
 
 static esp_err_t save_handler(httpd_req_t *req)
 {
+    if (!maintenance_authorized(req)) {
+        httpd_resp_set_status(req, "403 Forbidden");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+        return httpd_resp_sendstr(req, "{\"error\":\"unauthorized\"}");
+    }
+
     char body[160] = {0};
 
     if (req->content_len <= 0 ||
@@ -1367,8 +1533,10 @@ void provisioning_start()
         return;
     }
 
+    ESP_LOGI(TAG, "AP logout compacto r2 - dispositivo %s", deviceid_get());
+
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 10;
+    config.max_uri_handlers = 11;
 
     esp_err_t err = httpd_start(&s_server, &config);
 
@@ -1417,6 +1585,20 @@ void provisioning_start()
             &login_post_uri
         )
     );
+
+    httpd_uri_t logout_uri = {};
+    logout_uri.uri = "/logout";
+    logout_uri.method = HTTP_POST;
+    logout_uri.handler = logout_handler;
+
+    ESP_ERROR_CHECK(
+        httpd_register_uri_handler(
+            s_server,
+            &logout_uri
+        )
+    );
+
+
 
     httpd_uri_t admin_uri = {};
     admin_uri.uri = "/admin";
@@ -1516,6 +1698,7 @@ void provisioning_stop()
 
     httpd_stop(s_server);
     s_server = nullptr;
+    memset(s_maintenance_sessions, 0, sizeof(s_maintenance_sessions));
 
     ESP_LOGI(
         TAG,
